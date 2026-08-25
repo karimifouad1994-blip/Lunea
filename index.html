@@ -335,7 +335,7 @@ html[dir="rtl"] .cart-item-remove{text-align:start;}
       <span class="mark" style="font-size:26px;">LUNÉA</span>
       <span class="footer-tagline" data-i18n="brand.tagline">Luxury Collection</span>
       <div class="footer-badges">
-        <span class="footer-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Zm0 15H7V5h10v12Z"/></svg>WhatsApp</span>
+        <a class="footer-badge" href="https://wa.me/212648701722" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Zm0 15H7V5h10v12Z"/></svg>WhatsApp</a>
         <span class="footer-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 16V8a1 1 0 0 1 1-1h9v9H3Zm11-6h4l3 3v3h-7v-6Z"/></svg><span data-i18n="footer.delivery">Livraison au Maroc</span></span>
         <span class="footer-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="6" width="18" height="13" rx="2"/></svg><span data-i18n="footer.cod">Paiement à la livraison</span></span>
       </div>
@@ -429,6 +429,11 @@ html[dir="rtl"] .cart-item-remove{text-align:start;}
    CONFIG
    ============================================================ */
 const WHATSAPP_NUMBER = "212648701722";
+
+/* SUPABASE */
+const SUPABASE_URL = "https://uqzphhqjsxcyorwbxdli.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Hnjx1oNHnBDb9wCT61QaeQ_RBaDOUu7";
+const SUPABASE_ORDERS_URL = `${SUPABASE_URL}/rest/v1/Orders`;
 /* ⚠️ Admin access note: this is still a static HTML file, so it cannot provide
    real server-side security — anyone with access to the file/browser devtools
    could in theory bypass this. What changed vs. before: there is no visible
@@ -801,8 +806,12 @@ function setLanguage(lang){
   document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
   document.querySelectorAll(".lang-btn").forEach(b=> b.classList.toggle("active", b.dataset.lang === lang));
   applyTranslations();
+  refreshOpenAdminView();
 }
-document.querySelectorAll(".lang-btn").forEach(btn=> btn.addEventListener("click", ()=> setLanguage(btn.dataset.lang)));
+document.addEventListener("click", (e)=>{
+  const btn = e.target.closest(".lang-btn");
+  if(btn) setLanguage(btn.dataset.lang);
+});
 
 /* ============================================================
    HERO DUST PARTICLES
@@ -1111,6 +1120,34 @@ document.getElementById("submitOrder").addEventListener("click", ()=>{
   saveOrders(orders);
   lastOrder = order;
 
+  // Save the order centrally in Supabase as well as localStorage.
+  // WhatsApp flow remains unchanged.
+  try {
+    const supabaseRow = {
+      order_code: order.id,
+      customer_name: order.customer.name,
+      phone: order.customer.phone,
+      city: order.customer.city,
+      address: order.customer.address + (order.customer.remark ? ` | ${order.customer.remark}` : ""),
+      products: order.items,
+      total: order.total,
+      status: order.status
+    };
+    fetch(SUPABASE_ORDERS_URL, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(supabaseRow),
+      keepalive: true
+    }).catch(err => console.error("Supabase order save failed:", err));
+  } catch (err) {
+    console.error("Supabase order preparation failed:", err);
+  }
+
   document.getElementById("confirmSummary").innerHTML = cartSummaryHTML();
   showCheckoutStep("confirm");
 
@@ -1137,8 +1174,25 @@ function openAdmin(){
   else if(localStorage.getItem(ADMIN_HASH_KEY)){ renderAdminLogin(); }
   else{ renderAdminSetup(); }
 }
+function adminLanguageSwitcherHTML(){
+  return `<div class="admin-lang-switch lang-switch" role="group" aria-label="Language switch" style="display:flex; justify-content:center; margin-bottom:22px;">
+    <button type="button" class="lang-btn" data-lang="fr">🇫🇷 FR</button>
+    <button type="button" class="lang-btn" data-lang="ar">🇲🇦 AR</button>
+  </div>`;
+}
+
+function refreshOpenAdminView(){
+  if(!adminOverlay.classList.contains("open")) return;
+  if(sessionStorage.getItem("lunea_admin_ok")==="1"){
+    const active = document.querySelector('[data-admintab].btn-primary')?.dataset.admintab || "orders";
+    active === "products" ? renderAdminProducts() : renderAdminOrders();
+  } else if(localStorage.getItem(ADMIN_HASH_KEY)){ renderAdminLogin(); }
+  else { renderAdminSetup(); }
+}
+
 function renderAdminSetup(){
   document.getElementById("adminWrap").innerHTML = `
+    ${adminLanguageSwitcherHTML()}
     <div class="admin-login">
       <h2 style="font-family:var(--font-display); font-size:26px; margin-bottom:8px;">${t("admin.setupTitle")}</h2>
       <p style="color:var(--ivory-dim); font-size:13px; margin-bottom:18px;">${t("admin.setupSubtitle")}</p>
@@ -1158,6 +1212,7 @@ function renderAdminSetup(){
 }
 function renderAdminLogin(){
   document.getElementById("adminWrap").innerHTML = `
+    ${adminLanguageSwitcherHTML()}
     <div class="admin-login">
       <h2 style="font-family:var(--font-display); font-size:26px; margin-bottom:18px;">${t("admin.loginTitle")}</h2>
       <div class="field" style="text-align:start;"><label>${t("admin.password")}</label><input type="password" id="adminPass"></div>
@@ -1192,7 +1247,8 @@ function bindAdminTabs(){
 }
 function renderAdminOrders(){
   const orders = loadOrders();
-  let html = adminTabsHTML("orders");
+  let html = adminLanguageSwitcherHTML();
+  html += adminTabsHTML("orders");
   html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
       <h2 style="font-family:var(--font-display); font-size:28px;">${t("admin.title")} (${orders.length})</h2>
       <button class="btn btn-ghost" id="adminLogoutBtn">${t("admin.logout")}</button>
@@ -1270,7 +1326,8 @@ function renderProductImagesHTML(p){
 }
 
 function renderAdminProducts(){
-  let html = adminTabsHTML("products");
+  let html = adminLanguageSwitcherHTML();
+  html += adminTabsHTML("products");
   html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
       <h2 style="font-family:var(--font-display); font-size:28px;">${t("admin.productsTitle")}</h2>
       <button class="btn btn-ghost" id="adminLogoutBtn">${t("admin.logout")}</button>
