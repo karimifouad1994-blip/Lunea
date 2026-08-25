@@ -434,17 +434,38 @@ const WHATSAPP_NUMBER = "212648701722";
 const SUPABASE_URL = "https://uqzphhqjsxcyorwbxdli.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Hnjx1oNHnBDb9wCT61QaeQ_RBaDOUu7";
 const SUPABASE_ORDERS_URL = `${SUPABASE_URL}/rest/v1/Orders`;
-/* ⚠️ Admin access note: this is still a static HTML file, so it cannot provide
-   real server-side security — anyone with access to the file/browser devtools
-   could in theory bypass this. What changed vs. before: there is no visible
-   "Admin" link on the public site anymore (access is only via the secret
-   #admin URL below), and the password is never stored in plain text — only
-   its SHA-256 hash is kept, in this browser's localStorage, after the admin
-   chooses it on first use. */
-const ADMIN_HASH_KEY = "lunea_admin_hash";
-async function sha256Hex(text){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+const SUPABASE_PRODUCTS_URL = `${SUPABASE_URL}/rest/v1/products`;
+const SUPABASE_AUTH_URL = `${SUPABASE_URL}/auth/v1`;
+const ADMIN_SESSION_KEY = "lunea_admin_session";
+
+function supabaseHeaders(token){
+  return {
+    "apikey": SUPABASE_PUBLISHABLE_KEY,
+    "Authorization": `Bearer ${token || SUPABASE_PUBLISHABLE_KEY}`,
+    "Content-Type": "application/json"
+  };
+}
+function getAdminToken(){
+  try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_KEY)||"null")?.access_token || null; }
+  catch(e){ return null; }
+}
+function isAdminAuthenticated(){ return !!getAdminToken(); }
+function clearAdminSession(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); }
+
+async function supabaseRequest(url, options={}){
+  const token = options.token || getAdminToken() || SUPABASE_PUBLISHABLE_KEY;
+  const headers = {...supabaseHeaders(token), ...(options.headers||{})};
+  const res = await fetch(url, {...options, headers});
+  if(!res.ok){
+    let detail = "";
+    try { detail = await res.text(); } catch(e){}
+    const err = new Error(`Supabase ${res.status}: ${detail || res.statusText}`);
+    err.status = res.status;
+    throw err;
+  }
+  if(res.status===204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 const PRODUCT_IMAGES = {
@@ -477,6 +498,7 @@ const DEFAULT_COLORS = [
 ];
 const DEFAULT_SIZES = ["S","M","L","XL"];
 const PRODUCT_VARIANTS_KEY = "lunea_product_variants";
+let PRODUCT_BACKEND_ROWS = {};
 function loadProductVariants(){ try{ return JSON.parse(localStorage.getItem(PRODUCT_VARIANTS_KEY)||'{}'); }catch(e){ return {}; } }
 function saveProductVariants(v){ try{ localStorage.setItem(PRODUCT_VARIANTS_KEY, JSON.stringify(v)); return true; }catch(e){ return false; } }
 let PRODUCT_VARIANTS = {};
@@ -484,7 +506,8 @@ function buildProductVariants(){
   const stored = loadProductVariants();
   const result = {};
   PRODUCTS.forEach(p=>{
-    const s = stored[p.id] || {};
+    const backend = PRODUCT_BACKEND_ROWS[p.id] || {};
+    const s = backend.variants || stored[p.id] || {};
     result[p.id] = {
       colors: (Array.isArray(s.colors) && s.colors.length) ? s.colors : DEFAULT_COLORS.map(c=>({...c})),
       sizes:  (Array.isArray(s.sizes)  && s.sizes.length)  ? s.sizes.slice() : DEFAULT_SIZES.slice(),
@@ -498,6 +521,9 @@ PRODUCT_VARIANTS = buildProductVariants();
 function persistVariantsOrShowError(){
   const ok = saveProductVariants(PRODUCT_VARIANTS);
   if(!ok) showToast(t("admin.imgSaveError"));
+  if(ok && isAdminAuthenticated()){
+    Object.keys(PRODUCT_VARIANTS).forEach(id=>saveProductToSupabase(id).catch(e=>console.error(e)));
+  }
   return ok;
 }
 function getProductColors(id){ return (PRODUCT_VARIANTS[id] && PRODUCT_VARIANTS[id].colors) || []; }
@@ -550,7 +576,7 @@ const I18N = {
     "wa.header":"🛍️ Nouvelle commande LUNÉA","wa.orderId":"N° de commande","wa.products":"Produits :","wa.total":"Total","wa.client":"Client :",
     "wa.name":"Nom","wa.phone":"Téléphone","wa.city":"Ville","wa.address":"Adresse","wa.remark":"Remarque","wa.payment":"Paiement : À la livraison",
     "unit.dh":"DH",
-    "admin.loginTitle":"Espace Admin","admin.password":"Mot de passe","admin.login":"Se connecter","admin.wrongPass":"Mot de passe incorrect",
+    "admin.loginTitle":"Espace Admin","admin.email":"Email","admin.password":"Mot de passe","admin.login":"Se connecter","admin.wrongPass":"Email ou mot de passe incorrect","admin.supabaseLoginHint":"Connectez-vous avec le compte Admin Supabase.","admin.loginRequired":"Email et mot de passe requis","admin.backendReadError":"Impossible de charger les données.","admin.backendWriteError":"Impossible d’enregistrer. Vérifiez la connexion Supabase.",
     "admin.title":"Commandes","admin.empty":"Aucune commande pour le moment.","admin.status":"Statut","admin.logout":"Déconnexion",
     "admin.setupTitle":"Créer l'accès Admin","admin.setupSubtitle":"Choisissez un mot de passe pour protéger cet espace.",
     "admin.newPassword":"Nouveau mot de passe","admin.confirmPassword":"Confirmer le mot de passe","admin.createBtn":"Créer le mot de passe",
@@ -616,7 +642,7 @@ const I18N = {
     "wa.header":"🛍️ طلب جديد من LUNÉA","wa.orderId":"رقم الطلب","wa.products":"المنتجات:","wa.total":"المجموع","wa.client":"العميلة:",
     "wa.name":"الاسم","wa.phone":"الهاتف","wa.city":"المدينة","wa.address":"العنوان","wa.remark":"ملاحظة","wa.payment":"الدفع: عند الاستلام",
     "unit.dh":"درهم",
-    "admin.loginTitle":"لوحة التحكم","admin.password":"كلمة المرور","admin.login":"دخول","admin.wrongPass":"كلمة المرور غير صحيحة",
+    "admin.loginTitle":"لوحة التحكم","admin.email":"البريد الإلكتروني","admin.password":"كلمة المرور","admin.login":"دخول","admin.wrongPass":"البريد الإلكتروني أو كلمة المرور غير صحيحة","admin.supabaseLoginHint":"سجّل الدخول بالحساب الإداري الموجود في Supabase.","admin.loginRequired":"أدخل البريد الإلكتروني وكلمة المرور","admin.backendReadError":"تعذر تحميل البيانات.","admin.backendWriteError":"تعذر الحفظ. تحقق من اتصال Supabase.",
     "admin.title":"الطلبات","admin.empty":"لا توجد طلبات حتى الآن.","admin.status":"الحالة","admin.logout":"تسجيل الخروج",
     "admin.setupTitle":"إنشاء وصول الإدارة","admin.setupSubtitle":"اختر كلمة مرور لحماية هذا القسم.",
     "admin.newPassword":"كلمة المرور الجديدة","admin.confirmPassword":"تأكيد كلمة المرور","admin.createBtn":"إنشاء كلمة المرور",
@@ -661,6 +687,49 @@ function loadCart(){ try{ return JSON.parse(localStorage.getItem('lunea_cart')||
 function saveCart(){ localStorage.setItem('lunea_cart', JSON.stringify(cart)); }
 function loadOrders(){ try{ return JSON.parse(localStorage.getItem('lunea_orders')||'[]'); }catch(e){ return []; } }
 function saveOrders(orders){ localStorage.setItem('lunea_orders', JSON.stringify(orders)); }
+function mapSupabaseOrder(r){
+  return {
+    id: r.order_code,
+    date: r.created_at || new Date().toISOString(),
+    status: r.status || "new",
+    customer:{name:r.customer_name||"", phone:r.phone||"", city:r.city||"", address:(r.address||"").split(" | ")[0], remark:(r.address||"").includes(" | ") ? r.address.split(" | ").slice(1).join(" | ") : ""},
+    items: Array.isArray(r.products) ? r.products : [],
+    total: Number(r.total||0),
+    payment: "cod"
+  };
+}
+async function fetchOrdersFromSupabase(){
+  const rows = await supabaseRequest(`${SUPABASE_ORDERS_URL}?select=*&order=created_at.desc`, {headers:{"Prefer":"return=representation"}});
+  const orders = Array.isArray(rows) ? rows.map(mapSupabaseOrder) : [];
+  saveOrders(orders);
+  return orders;
+}
+async function createOrderInSupabase(order){
+  const row = {
+    order_code: order.id,
+    customer_name: order.customer.name,
+    phone: order.customer.phone,
+    city: order.customer.city,
+    address: order.customer.address + (order.customer.remark ? ` | ${order.customer.remark}` : ""),
+    products: order.items,
+    total: order.total,
+    status: order.status
+  };
+  await supabaseRequest(SUPABASE_ORDERS_URL, {
+    method:"POST",
+    headers:{"Prefer":"return=minimal"},
+    body:JSON.stringify(row),
+    token:SUPABASE_PUBLISHABLE_KEY
+  });
+}
+async function updateOrderStatusInSupabase(orderCode,status){
+  await supabaseRequest(`${SUPABASE_ORDERS_URL}?order_code=eq.${encodeURIComponent(orderCode)}`, {
+    method:"PATCH",
+    headers:{"Prefer":"return=minimal"},
+    body:JSON.stringify({status}),
+    token:getAdminToken()
+  });
+}
 
 /* ============================================================
    PRODUCT MANAGEMENT (admin edits — client-side only, same
@@ -672,12 +741,64 @@ function saveOrders(orders){ localStorage.setItem('lunea_orders', JSON.stringify
    change. Product images and PRODUCT_IMAGES are never touched here.
    ============================================================ */
 const PRODUCT_OVERRIDES_KEY = "lunea_product_overrides";
+async function loadProductsFromSupabase(){
+  try{
+    const rows=await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?select=*&order=id.asc`, {token:SUPABASE_PUBLISHABLE_KEY});
+    if(Array.isArray(rows) && rows.length){
+      PRODUCT_BACKEND_ROWS={};
+      rows.forEach(r=>PRODUCT_BACKEND_ROWS[r.id]=r);
+      rows.forEach(r=>{
+        const p=PRODUCTS.find(x=>x.id===r.id); if(!p) return;
+        if(r.price!=null) p.price=Number(r.price);
+        if(r.enabled!=null) p.enabled=!!r.enabled;
+        if(r.name_fr!=null) I18N.fr[p.nameKey]=r.name_fr;
+        if(r.name_ar!=null) I18N.ar[p.nameKey]=r.name_ar;
+        if(r.desc_fr!=null) I18N.fr[p.descKey]=r.desc_fr;
+        if(r.desc_ar!=null) I18N.ar[p.descKey]=r.desc_ar;
+        if(r.badge_fr!=null) I18N.fr[p.badgeKey]=r.badge_fr;
+        if(r.badge_ar!=null) I18N.ar[p.badgeKey]=r.badge_ar;
+      });
+      rows.forEach(r=>{
+        if(r.variants && typeof r.variants === "object") PRODUCT_VARIANTS[r.id]=r.variants;
+        if(Array.isArray(r.images) && r.images.length){ PRODUCT_IMAGE_GALLERY[r.id]=r.images.slice(); PRODUCT_IMAGES[r.id]=r.images[0]; }
+      });
+      return true;
+    }
+  }catch(err){ console.warn("Supabase products unavailable; using built-in defaults.",err); }
+  return false;
+}
+async function ensureProductsInSupabase(){
+  try{
+    const existing=await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?select=id`,{token:getAdminToken()});
+    const have=new Set((Array.isArray(existing)?existing:[]).map(r=>r.id));
+    const missing=PRODUCTS.filter(p=>!have.has(p.id)).map(p=>({
+      id:p.id,name_fr:I18N.fr[p.nameKey],name_ar:I18N.ar[p.nameKey],desc_fr:I18N.fr[p.descKey],desc_ar:I18N.ar[p.descKey],
+      badge_fr:I18N.fr[p.badgeKey],badge_ar:I18N.ar[p.badgeKey],price:p.price,enabled:p.enabled!==false,
+      variants:PRODUCT_VARIANTS[p.id]||null,images:null
+    }));
+    if(missing.length) await supabaseRequest(SUPABASE_PRODUCTS_URL,{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(missing),token:getAdminToken()});
+  }catch(err){ console.warn("Products seed skipped/failed",err); }
+}
+async function saveProductToSupabase(id){
+  if(!isAdminAuthenticated()) return;
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  const row={name_fr:I18N.fr[p.nameKey],name_ar:I18N.ar[p.nameKey],desc_fr:I18N.fr[p.descKey],desc_ar:I18N.ar[p.descKey],badge_fr:I18N.fr[p.badgeKey],badge_ar:I18N.ar[p.badgeKey],price:p.price,enabled:p.enabled!==false,variants:PRODUCT_VARIANTS[id]||null,images:PRODUCT_IMAGE_GALLERY[id]||null};
+  await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?id=eq.${encodeURIComponent(id)}`,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(row),token:getAdminToken()});
+}
+
 function loadProductOverrides(){ try{ return JSON.parse(localStorage.getItem(PRODUCT_OVERRIDES_KEY)||'{}'); }catch(e){ return {}; } }
 function saveProductOverrides(ov){ localStorage.setItem(PRODUCT_OVERRIDES_KEY, JSON.stringify(ov)); }
 function applyProductOverrides(){
   const overrides = loadProductOverrides();
   PRODUCTS.forEach(p=>{
-    const o = overrides[p.id];
+    const backend = PRODUCT_BACKEND_ROWS[p.id];
+    const o = backend ? {
+      price: backend.price,
+      enabled: backend.enabled,
+      name:{fr:backend.name_fr, ar:backend.name_ar},
+      desc:{fr:backend.desc_fr, ar:backend.desc_ar},
+      badge:{fr:backend.badge_fr, ar:backend.badge_ar}
+    } : overrides[p.id];
     p.enabled = !(o && o.enabled === false);
     if(!o) return;
     if(typeof o.price === "number" && !isNaN(o.price)) p.price = o.price;
@@ -711,7 +832,10 @@ function buildProductImageGallery(){
   const stored = loadProductGallery();
   const gallery = {};
   PRODUCTS.forEach(p=>{
-    if(stored[p.id] && Array.isArray(stored[p.id]) && stored[p.id].length){
+    const backendImages = PRODUCT_BACKEND_ROWS[p.id]?.images;
+    if(Array.isArray(backendImages) && backendImages.length){
+      gallery[p.id] = backendImages.slice();
+    } else if(stored[p.id] && Array.isArray(stored[p.id]) && stored[p.id].length){
       gallery[p.id] = stored[p.id].slice();
     } else {
       gallery[p.id] = [PRODUCT_IMAGES[p.id]];
@@ -1095,7 +1219,7 @@ function openWhatsappForOrder(o){
   window.location.href = waWebUrl;
 }
 
-document.getElementById("submitOrder").addEventListener("click", ()=>{
+document.getElementById("submitOrder").addEventListener("click", async ()=>{
   if(cart.length===0){ showToast(t("toast.emptyCart")); return; }
   if(!validateCheckout()) return;
 
@@ -1115,38 +1239,20 @@ document.getElementById("submitOrder").addEventListener("click", ()=>{
     payment: "cod"
   };
 
+  const submitBtn=document.getElementById("submitOrder");
+  submitBtn.disabled=true;
+  try{
+    await createOrderInSupabase(order);
+  }catch(err){
+    console.error("Supabase order save failed:", err);
+    submitBtn.disabled=false;
+    showToast(t("admin.backendWriteError"));
+    return;
+  }
   const orders = loadOrders();
   orders.unshift(order);
   saveOrders(orders);
   lastOrder = order;
-
-  // Save the order centrally in Supabase as well as localStorage.
-  // WhatsApp flow remains unchanged.
-  try {
-    const supabaseRow = {
-      order_code: order.id,
-      customer_name: order.customer.name,
-      phone: order.customer.phone,
-      city: order.customer.city,
-      address: order.customer.address + (order.customer.remark ? ` | ${order.customer.remark}` : ""),
-      products: order.items,
-      total: order.total,
-      status: order.status
-    };
-    fetch(SUPABASE_ORDERS_URL, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_PUBLISHABLE_KEY,
-        "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-      },
-      body: JSON.stringify(supabaseRow),
-      keepalive: true
-    }).catch(err => console.error("Supabase order save failed:", err));
-  } catch (err) {
-    console.error("Supabase order preparation failed:", err);
-  }
 
   document.getElementById("confirmSummary").innerHTML = cartSummaryHTML();
   showCheckoutStep("confirm");
@@ -1170,9 +1276,8 @@ if(location.hash === "#admin"){ window.addEventListener("DOMContentLoaded", open
 
 function openAdmin(){
   adminOverlay.classList.add("open");
-  if(sessionStorage.getItem("lunea_admin_ok")==="1"){ renderAdminOrders(); }
-  else if(localStorage.getItem(ADMIN_HASH_KEY)){ renderAdminLogin(); }
-  else{ renderAdminSetup(); }
+  if(isAdminAuthenticated()) renderAdminOrders();
+  else renderAdminLogin();
 }
 function adminLanguageSwitcherHTML(){
   return `<div class="admin-lang-switch lang-switch" role="group" aria-label="Language switch" style="display:flex; justify-content:center; margin-bottom:22px;">
@@ -1180,60 +1285,42 @@ function adminLanguageSwitcherHTML(){
     <button type="button" class="lang-btn" data-lang="ar">🇲🇦 AR</button>
   </div>`;
 }
-
 function refreshOpenAdminView(){
   if(!adminOverlay.classList.contains("open")) return;
-  if(sessionStorage.getItem("lunea_admin_ok")==="1"){
+  if(isAdminAuthenticated()){
     const active = document.querySelector('[data-admintab].btn-primary')?.dataset.admintab || "orders";
     active === "products" ? renderAdminProducts() : renderAdminOrders();
-  } else if(localStorage.getItem(ADMIN_HASH_KEY)){ renderAdminLogin(); }
-  else { renderAdminSetup(); }
-}
-
-function renderAdminSetup(){
-  document.getElementById("adminWrap").innerHTML = `
-    ${adminLanguageSwitcherHTML()}
-    <div class="admin-login">
-      <h2 style="font-family:var(--font-display); font-size:26px; margin-bottom:8px;">${t("admin.setupTitle")}</h2>
-      <p style="color:var(--ivory-dim); font-size:13px; margin-bottom:18px;">${t("admin.setupSubtitle")}</p>
-      <div class="field" style="text-align:start;"><label>${t("admin.newPassword")}</label><input type="password" id="adminNewPass"></div>
-      <div class="field" style="text-align:start;"><label>${t("admin.confirmPassword")}</label><input type="password" id="adminConfirmPass"></div>
-      <button class="btn btn-primary btn-block" id="adminCreateBtn">${t("admin.createBtn")}</button>
-    </div>`;
-  document.getElementById("adminCreateBtn").addEventListener("click", async ()=>{
-    const p1 = document.getElementById("adminNewPass").value;
-    const p2 = document.getElementById("adminConfirmPass").value;
-    if(p1.length < 6){ showToast(t("admin.passTooShort")); return; }
-    if(p1 !== p2){ showToast(t("admin.passMismatch")); return; }
-    localStorage.setItem(ADMIN_HASH_KEY, await sha256Hex(p1));
-    sessionStorage.setItem("lunea_admin_ok","1");
-    renderAdminOrders();
-  });
+  } else renderAdminLogin();
 }
 function renderAdminLogin(){
   document.getElementById("adminWrap").innerHTML = `
     ${adminLanguageSwitcherHTML()}
     <div class="admin-login">
-      <h2 style="font-family:var(--font-display); font-size:26px; margin-bottom:18px;">${t("admin.loginTitle")}</h2>
-      <div class="field" style="text-align:start;"><label>${t("admin.password")}</label><input type="password" id="adminPass"></div>
+      <h2 style="font-family:var(--font-display); font-size:26px; margin-bottom:8px;">${t("admin.loginTitle")}</h2>
+      <p style="color:var(--ivory-dim); font-size:13px; margin-bottom:18px;">${t("admin.supabaseLoginHint")}</p>
+      <div class="field" style="text-align:start;"><label>${t("admin.email")}</label><input type="email" id="adminEmail" autocomplete="username"></div>
+      <div class="field" style="text-align:start;"><label>${t("admin.password")}</label><input type="password" id="adminPass" autocomplete="current-password"></div>
       <button class="btn btn-primary btn-block" id="adminLoginBtn">${t("admin.login")}</button>
-      <div style="text-align:center; margin-top:14px;"><a href="#" class="admin-link" id="adminForgotLink">${t("admin.forgotPassword")}</a></div>
     </div>`;
   document.getElementById("adminLoginBtn").addEventListener("click", async ()=>{
-    const hash = await sha256Hex(document.getElementById("adminPass").value);
-    if(hash === localStorage.getItem(ADMIN_HASH_KEY)){
-      sessionStorage.setItem("lunea_admin_ok","1");
+    const email=document.getElementById("adminEmail").value.trim();
+    const password=document.getElementById("adminPass").value;
+    if(!email || !password){ showToast(t("admin.loginRequired")); return; }
+    const btn=document.getElementById("adminLoginBtn"); btn.disabled=true;
+    try{
+      const data=await fetch(`${SUPABASE_AUTH_URL}/token?grant_type=password`,{
+        method:"POST", headers:supabaseHeaders(SUPABASE_PUBLISHABLE_KEY),
+        body:JSON.stringify({email,password})
+      }).then(async r=>{ const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error_description||d.msg||d.message||"Login failed"); return d; });
+      sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({access_token:data.access_token, refresh_token:data.refresh_token, user:data.user}));
+      await ensureProductsInSupabase();
+      await loadProductsFromSupabase();
       renderAdminOrders();
-    } else showToast(t("admin.wrongPass"));
-  });
-  document.getElementById("adminForgotLink").addEventListener("click", (e)=>{
-    e.preventDefault();
-    if(confirm(t("admin.resetConfirm"))){
-      localStorage.removeItem(ADMIN_HASH_KEY);
-      renderAdminSetup();
-    }
+    }catch(err){ console.error(err); showToast(t("admin.wrongPass")); }
+    finally{ btn.disabled=false; }
   });
 }
+function signOutAdmin(){ clearAdminSession(); renderAdminLogin(); }
 function adminTabsHTML(active){
   return `<div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
       <button type="button" class="btn ${active==='orders'?'btn-primary':'btn-ghost'}" data-admintab="orders">${t("admin.ordersTab")}</button>
@@ -1245,8 +1332,16 @@ function bindAdminTabs(){
     b.addEventListener("click", ()=>{ b.dataset.admintab==="orders" ? renderAdminOrders() : renderAdminProducts(); });
   });
 }
-function renderAdminOrders(){
-  const orders = loadOrders();
+async function renderAdminOrders(){
+  if(!isAdminAuthenticated()){ renderAdminLogin(); return; }
+  let orders=[];
+  try{ orders=await fetchOrdersFromSupabase(); }
+  catch(err){
+    console.error(err);
+    if(err.status===401 || err.status===403){ clearAdminSession(); renderAdminLogin(); return; }
+    orders=loadOrders();
+    showToast(t("admin.backendReadError"));
+  }
   let html = adminLanguageSwitcherHTML();
   html += adminTabsHTML("orders");
   html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
@@ -1257,22 +1352,22 @@ function renderAdminOrders(){
   else{
     html += orders.map(o=>{
       const statusIdx = STATUS_IDS.indexOf(o.status);
-      const itemsHtml = o.items.map(i=>`<div class="row"><span>${i.name} — ${i.color} — ${i.size} ×${i.qty}</span><span>${i.price*i.qty} ${t("unit.dh")}</span></div>`).join("");
+      const itemsHtml = (o.items||[]).map(i=>`<div class="row"><span>${escHtml(i.name)} — ${escHtml(i.color)} — ${escHtml(i.size)} ×${i.qty}</span><span>${i.price*i.qty} ${t("unit.dh")}</span></div>`).join("");
       return `
       <div class="admin-order">
-        <div class="admin-order-head" data-order="${o.id}">
-          <div><b>${o.id}</b> — ${o.customer.name} — ${new Date(o.date).toLocaleString()}</div>
+        <div class="admin-order-head" data-order="${escAttr(o.id)}">
+          <div><b>${escHtml(o.id)}</b> — ${escHtml(o.customer.name)} — ${new Date(o.date).toLocaleString()}</div>
           <span class="admin-status">${t(STATUS_KEYS[statusIdx]||"status.new")}</span>
         </div>
-        <div class="admin-order-body" id="body-${o.id}">
-          <div class="row"><span>${t("wa.phone")}</span><span>${o.customer.phone}</span></div>
-          <div class="row"><span>${t("wa.city")}</span><span>${o.customer.city}</span></div>
-          <div class="row"><span>${t("wa.address")}</span><span>${o.customer.address}</span></div>
-          ${o.customer.remark ? `<div class="row"><span>${t("wa.remark")}</span><span>${o.customer.remark}</span></div>` : ""}
+        <div class="admin-order-body" id="body-${escAttr(o.id)}">
+          <div class="row"><span>${t("wa.phone")}</span><span>${escHtml(o.customer.phone)}</span></div>
+          <div class="row"><span>${t("wa.city")}</span><span>${escHtml(o.customer.city)}</span></div>
+          <div class="row"><span>${t("wa.address")}</span><span>${escHtml(o.customer.address)}</span></div>
+          ${o.customer.remark ? `<div class="row"><span>${t("wa.remark")}</span><span>${escHtml(o.customer.remark)}</span></div>` : ""}
           <br>${itemsHtml}
           <div class="row total"><span>${t("summary.total")}</span><span>${o.total} ${t("unit.dh")}</span></div>
           <label style="display:block; margin-top:14px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--gold-soft);">${t("admin.status")}</label>
-          <select data-order="${o.id}">
+          <select data-order="${escAttr(o.id)}">
             ${STATUS_IDS.map((sid,idx)=>`<option value="${sid}" ${sid===o.status?"selected":""}>${t(STATUS_KEYS[idx])}</option>`).join("")}
           </select>
         </div>
@@ -1285,14 +1380,18 @@ function renderAdminOrders(){
     h.addEventListener("click", ()=> document.getElementById("body-"+h.dataset.order).classList.toggle("open"));
   });
   document.querySelectorAll(".admin-order-body select").forEach(sel=>{
-    sel.addEventListener("change", ()=>{
-      const orders2 = loadOrders();
-      const ord = orders2.find(x=>x.id===sel.dataset.order);
-      if(ord){ ord.status = sel.value; saveOrders(orders2); renderAdminOrders(); }
+    sel.addEventListener("change", async ()=>{
+      const orderCode=sel.dataset.order, status=sel.value;
+      sel.disabled=true;
+      try{
+        await updateOrderStatusInSupabase(orderCode,status);
+        const orders2=loadOrders(); const ord=orders2.find(x=>x.id===orderCode); if(ord){ord.status=status; saveOrders(orders2);}
+        await renderAdminOrders();
+      }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); sel.disabled=false; }
     });
   });
   const logoutBtn = document.getElementById("adminLogoutBtn");
-  if(logoutBtn) logoutBtn.addEventListener("click", ()=>{ sessionStorage.removeItem("lunea_admin_ok"); renderAdminLogin(); });
+  if(logoutBtn) logoutBtn.addEventListener("click", signOutAdmin);
 }
 
 /* ---- Product management view ---- */
@@ -1521,6 +1620,9 @@ function bindProductVariantEvents(){
 function persistGalleryOrShowError(){
   const ok = saveProductGallery(PRODUCT_IMAGE_GALLERY);
   if(!ok) showToast(t("admin.imgSaveError"));
+  if(ok && isAdminAuthenticated()){
+    Object.keys(PRODUCT_IMAGE_GALLERY).forEach(id=>saveProductToSupabase(id).catch(e=>console.error(e)));
+  }
   return ok;
 }
 
@@ -1666,8 +1768,8 @@ function saveProductEdits(id){
   } : null;
   persistVariantsOrShowError();
 
+  saveProductToSupabase(id).then(()=>showToast(t("admin.productSaved"))).catch(err=>{ console.error(err); showToast(t("admin.backendWriteError")); });
   renderProducts();
-  showToast(t("admin.productSaved"));
   openProductId = id;
   renderAdminProducts();
 }
@@ -1675,8 +1777,14 @@ function saveProductEdits(id){
 /* ============================================================
    INIT
    ============================================================ */
-setLanguage("ar");
-updateCartBadge();
+(async function initLunea(){
+  await loadProductsFromSupabase();
+  applyProductOverrides();
+  PRODUCT_VARIANTS = buildProductVariants();
+  PRODUCT_IMAGE_GALLERY = buildProductImageGallery();
+  setLanguage("ar");
+  updateCartBadge();
+})();
 </script>
 </body>
 </html>
