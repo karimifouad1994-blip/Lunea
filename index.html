@@ -529,11 +529,13 @@ function buildProductVariants(){
   return result;
 }
 PRODUCT_VARIANTS = buildProductVariants();
-async function persistVariantsOrShowError(id){
-  if(!id || !PRODUCT_VARIANTS[id]) throw new Error("Produit introuvable");
-  if(!saveProductVariants(PRODUCT_VARIANTS)) throw new Error(t("admin.imgSaveError"));
-  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
-  await saveProductToSupabase(id);
+async function persistVariantsOrShowError(){
+  const ok = saveProductVariants(PRODUCT_VARIANTS);
+  if(!ok){ showToast(t("admin.imgSaveError")); return false; }
+  if(isAdminAuthenticated()){
+    const ids=Object.keys(PRODUCT_VARIANTS);
+    await Promise.all(ids.map(id=>saveProductToSupabase(id)));
+  }
   return true;
 }
 function getProductColors(id){ return (PRODUCT_VARIANTS[id] && PRODUCT_VARIANTS[id].colors) || []; }
@@ -737,12 +739,14 @@ async function createOrderInSupabase(order){
   });
 }
 async function updateOrderStatusInSupabase(orderCode,status){
-  await supabaseRequest(`${SUPABASE_ORDERS_URL}?order_code=eq.${encodeURIComponent(orderCode)}`, {
+  const result = await supabaseRequest(`${SUPABASE_ORDERS_URL}?order_code=eq.${encodeURIComponent(orderCode)}&select=order_code`, {
     method:"PATCH",
-    headers:{"Prefer":"return=minimal"},
+    headers:{"Prefer":"return=representation"},
     body:JSON.stringify({status}),
     token:getAdminToken()
   });
+  if(!Array.isArray(result) || !result.length) throw new Error("Order status update returned no row (check Supabase RLS policies for UPDATE on Orders)");
+  return result[0];
 }
 
 /* ============================================================
@@ -774,24 +778,26 @@ function applySiteContent(){
 }
 async function saveSiteContent(content){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
-  await supabaseRequest(SUPABASE_SETTINGS_URL,{
+  const result = await supabaseRequest(`${SUPABASE_SETTINGS_URL}?select=id`,{
     method:"POST",
-    headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},
+    headers:{"Prefer":"resolution=merge-duplicates,return=representation"},
     body:JSON.stringify({id:"site",content_fr:content.fr,content_ar:content.ar}),
     token:getAdminToken()
   });
+  if(!Array.isArray(result) || !result.length) throw new Error("Site content save returned no row (check Supabase RLS policies for INSERT/UPDATE on site_settings)");
   SITE_CONTENT={fr:{...content.fr},ar:{...content.ar}};
   applySiteContent();
 }
 async function saveSiteDefaultLanguage(lang){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   if(lang!=="ar" && lang!=="fr") throw new Error("Invalid language");
-  await supabaseRequest(SUPABASE_SETTINGS_URL,{
+  const result = await supabaseRequest(`${SUPABASE_SETTINGS_URL}?select=id`,{
     method:"POST",
-    headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},
+    headers:{"Prefer":"resolution=merge-duplicates,return=representation"},
     body:JSON.stringify({id:"site",default_language:lang}),
     token:getAdminToken()
   });
+  if(!Array.isArray(result) || !result.length) throw new Error("Site language save returned no row (check Supabase RLS policies for INSERT/UPDATE on site_settings)");
   SITE_DEFAULT_LANGUAGE=lang;
 }
 
@@ -934,8 +940,7 @@ async function uploadProductImageToStorage(file, productId){
 }
 async function deleteProductImageFromStorage(url){
   const path = storagePathFromUrl(url);
-  if(!path) return;
-  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  if(!path || !isAdminAuthenticated()) return;
   const res = await fetch(`${SUPABASE_STORAGE_OBJECT_URL}/${storageObjectPath(path)}`, {
     method:"DELETE",
     headers:{
@@ -1089,11 +1094,6 @@ function showToast(msg){
   el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=> el.classList.remove("show"), 2600);
-}
-function showBackendError(err, fallback){
-  console.error(err);
-  const msg = err && err.message ? err.message : (fallback || "Erreur inconnue");
-  showToast(msg);
 }
 
 /* ============================================================
@@ -1432,7 +1432,7 @@ document.getElementById("submitOrder").addEventListener("click", async ()=>{
   }catch(err){
     console.error("Supabase order save failed:", err);
     submitBtn.disabled=false;
-    showBackendError(err, t("admin.backendWriteError"));
+    showToast(t("admin.backendWriteError"));
     return;
   }
   const orders = loadOrders();
@@ -1580,7 +1580,7 @@ async function renderAdminOrders(){
         await updateOrderStatusInSupabase(orderCode,status);
         const orders2=loadOrders(); const ord=orders2.find(x=>x.id===orderCode); if(ord){ord.status=status; saveOrders(orders2);}
         await renderAdminOrders();
-      }catch(err){ console.error(err); showBackendError(err, t("admin.backendWriteError")); sel.disabled=false; }
+      }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); sel.disabled=false; }
     });
   });
   const logoutBtn = document.getElementById("adminLogoutBtn");
@@ -1628,7 +1628,7 @@ async function renderAdminSettings(){
     const btn=document.getElementById("saveSiteSettingsBtn"); const lang=document.getElementById("siteDefaultLanguage").value;
     btn.disabled=true;
     try{ await saveSiteDefaultLanguage(lang); showToast(t("admin.settingsSaved")); }
-    catch(err){ console.error(err); showBackendError(err, t("admin.backendWriteError")); }
+    catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
   });
   document.getElementById("saveFrontTextsBtn").addEventListener("click",async()=>{
@@ -1636,7 +1636,7 @@ async function renderAdminSettings(){
     const content={fr:{},ar:{}};
     keys.forEach(([key])=>{ const safe=key.replace(/[^a-z0-9]+/gi,'-'); content.fr[key]=document.getElementById(`front-fr-${safe}`).value.trim(); content.ar[key]=document.getElementById(`front-ar-${safe}`).value.trim(); });
     try{ await saveSiteContent(content); applyTranslations(); showToast(t("admin.settingsSaved")); }
-    catch(err){ console.error(err); showBackendError(err, t("admin.backendWriteError")); }
+    catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
   });
 }
@@ -1669,149 +1669,6 @@ function renderProductImagesHTML(p){
     <div class="admin-gallery">${items}</div>
     <label class="admin-gallery-add">${t("admin.imgAdd")}<input type="file" accept="image/*" data-imgadd="${p.id}" hidden></label>
   `;
-}
-
-
-async function saveProductEdits(id){
-  if(!isAdminAuthenticated()){ showToast(t("admin.backendWriteError")); return; }
-  const p=PRODUCTS.find(x=>x.id===id);
-  if(!p) return;
-  const old={
-    price:p.price, enabled:p.enabled,
-    nameFr:I18N.fr[p.nameKey], nameAr:I18N.ar[p.nameKey],
-    descFr:I18N.fr[p.descKey], descAr:I18N.ar[p.descKey],
-    badgeFr:I18N.fr[p.badgeKey], badgeAr:I18N.ar[p.badgeKey],
-    variants:JSON.parse(JSON.stringify(PRODUCT_VARIANTS[id]||{}))
-  };
-  try{
-    p.price=Number(document.getElementById(`pf-price-${id}`).value)||0;
-    p.enabled=document.getElementById(`pf-enabled-${id}`).checked;
-    I18N.fr[p.nameKey]=document.getElementById(`pf-name-fr-${id}`).value.trim();
-    I18N.ar[p.nameKey]=document.getElementById(`pf-name-ar-${id}`).value.trim();
-    I18N.fr[p.descKey]=document.getElementById(`pf-desc-fr-${id}`).value.trim();
-    I18N.ar[p.descKey]=document.getElementById(`pf-desc-ar-${id}`).value.trim();
-    I18N.fr[p.badgeKey]=document.getElementById(`pf-badge-fr-${id}`).value.trim();
-    I18N.ar[p.badgeKey]=document.getElementById(`pf-badge-ar-${id}`).value.trim();
-    const v=PRODUCT_VARIANTS[id] || (PRODUCT_VARIANTS[id]={colors:[],sizes:[],stock:null,pack:null});
-    const stockEl=document.getElementById(`pf-stock-${id}`);
-    v.stock=stockEl && stockEl.value.trim()!=='' ? Number(stockEl.value) : null;
-    const piecesEl=document.getElementById(`pf-pack-pieces-${id}`);
-    const packNameFr=document.getElementById(`pf-pack-name-fr-${id}`);
-    const packNameAr=document.getElementById(`pf-pack-name-ar-${id}`);
-    const packContentsFr=document.getElementById(`pf-pack-contents-fr-${id}`);
-    const packContentsAr=document.getElementById(`pf-pack-contents-ar-${id}`);
-    if(piecesEl && piecesEl.value.trim()!==''){
-      v.pack=v.pack||{};
-      v.pack.pieces=Number(piecesEl.value)||0;
-      v.pack.name={fr:packNameFr?.value.trim()||'',ar:packNameAr?.value.trim()||''};
-      v.pack.contents={fr:packContentsFr?.value.trim()||'',ar:packContentsAr?.value.trim()||''};
-    }else if(v.pack){ v.pack=null; }
-    saveProductVariants(PRODUCT_VARIANTS);
-    await saveProductToSupabase(id);
-    renderProducts();
-    openProductId=id;
-    renderAdminProducts();
-    showToast(t("admin.settingsSaved"));
-  }catch(err){
-    p.price=old.price; p.enabled=old.enabled;
-    I18N.fr[p.nameKey]=old.nameFr; I18N.ar[p.nameKey]=old.nameAr;
-    I18N.fr[p.descKey]=old.descFr; I18N.ar[p.descKey]=old.descAr;
-    I18N.fr[p.badgeKey]=old.badgeFr; I18N.ar[p.badgeKey]=old.badgeAr;
-    PRODUCT_VARIANTS[id]=old.variants; saveProductVariants(PRODUCT_VARIANTS);
-    console.error("saveProductEdits",err);
-    showBackendError(err, t("admin.backendWriteError"));
-  }
-}
-
-function bindProductImageEvents(){
-  document.querySelectorAll("[data-imgadd]").forEach(input=>{
-    input.addEventListener("change", async ()=>{
-      const id=input.dataset.imgadd;
-      const file=input.files && input.files[0]; if(!file) return;
-      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
-      try{
-        const url=await uploadProductImageToStorage(file,id);
-        PRODUCT_IMAGE_GALLERY[id]=old.concat(url);
-        syncPrimaryImage(id);
-        await saveProductToSupabase(id);
-        saveProductGallery(PRODUCT_IMAGE_GALLERY);
-        renderProducts(); openProductId=id; renderAdminProducts();
-        showToast(t("admin.settingsSaved"));
-      }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
-        console.error("add image",err); showBackendError(err, t("admin.backendWriteError"));
-      }finally{ input.value=""; }
-    });
-  });
-  document.querySelectorAll("[data-imgreplace]").forEach(input=>{
-    input.addEventListener("change", async ()=>{
-      const [id,idxRaw]=input.dataset.imgreplace.split(":"); const idx=Number(idxRaw);
-      const file=input.files && input.files[0]; if(!file) return;
-      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
-      try{
-        const url=await uploadProductImageToStorage(file,id);
-        PRODUCT_IMAGE_GALLERY[id][idx]=url; syncPrimaryImage(id);
-        await saveProductToSupabase(id);
-        try{ await deleteProductImageFromStorage(old[idx]); }catch(e){ console.warn("old image cleanup",e); }
-        saveProductGallery(PRODUCT_IMAGE_GALLERY);
-        renderProducts(); openProductId=id; renderAdminProducts(); showToast(t("admin.settingsSaved"));
-      }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
-        console.error("replace image",err); showBackendError(err, t("admin.backendWriteError"));
-      }finally{ input.value=""; }
-    });
-  });
-  document.querySelectorAll("[data-imgdelete]").forEach(btn=>{
-    btn.addEventListener("click", async e=>{
-      e.stopPropagation();
-      const [id,idxRaw]=btn.dataset.imgdelete.split(":"); const idx=Number(idxRaw);
-      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
-      if(old.length<=1){ showToast(t("admin.imgDeleteLastError")); return; }
-      try{
-        PRODUCT_IMAGE_GALLERY[id]=old.filter((_,i)=>i!==idx); syncPrimaryImage(id);
-        await saveProductToSupabase(id);
-        await deleteProductImageFromStorage(old[idx]);
-        saveProductGallery(PRODUCT_IMAGE_GALLERY);
-        renderProducts(); openProductId=id; renderAdminProducts(); showToast(t("admin.settingsSaved"));
-      }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
-        console.error("delete image",err); showBackendError(err, t("admin.backendWriteError"));
-      }
-    });
-  });
-  document.querySelectorAll("[data-imgmove]").forEach(btn=>{
-    btn.addEventListener("click", async e=>{
-      e.stopPropagation();
-      const [id,idxRaw,direction]=btn.dataset.imgmove.split(":"); const idx=Number(idxRaw);
-      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
-      const target=direction==="up"?idx-1:idx+1;
-      if(target<0 || target>=old.length) return;
-      const next=old.slice(); [next[idx],next[target]]=[next[target],next[idx]];
-      PRODUCT_IMAGE_GALLERY[id]=next; syncPrimaryImage(id);
-      try{
-        await saveProductToSupabase(id); saveProductGallery(PRODUCT_IMAGE_GALLERY);
-        renderProducts(); openProductId=id; renderAdminProducts();
-      }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showBackendError(err, t("admin.backendWriteError"));
-      }
-    });
-  });
-  document.querySelectorAll("[data-imgprimary]").forEach(btn=>{
-    btn.addEventListener("click", async e=>{
-      e.stopPropagation();
-      const [id,idxRaw]=btn.dataset.imgprimary.split(":"); const idx=Number(idxRaw);
-      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
-      if(idx<=0 || idx>=old.length) return;
-      const next=old.slice(); const [chosen]=next.splice(idx,1); next.unshift(chosen);
-      PRODUCT_IMAGE_GALLERY[id]=next; syncPrimaryImage(id);
-      try{
-        await saveProductToSupabase(id); saveProductGallery(PRODUCT_IMAGE_GALLERY);
-        renderProducts(); openProductId=id; renderAdminProducts();
-      }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showBackendError(err, t("admin.backendWriteError"));
-      }
-    });
-  });
 }
 
 function renderAdminProducts(){
@@ -1905,12 +1762,12 @@ function renderAdminProducts(){
     });
   });
   document.querySelectorAll("[data-save]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation(); await saveProductEdits(btn.dataset.save); });
+    btn.addEventListener("click", (e)=>{ e.stopPropagation(); saveProductEdits(btn.dataset.save); });
   });
   bindProductImageEvents();
   bindProductVariantEvents();
   const logoutBtn = document.getElementById("adminLogoutBtn");
-  if(logoutBtn) logoutBtn.addEventListener("click", ()=>{ signOutAdmin(); });
+  if(logoutBtn) logoutBtn.addEventListener("click", ()=>{ sessionStorage.removeItem("lunea_admin_ok"); renderAdminLogin(); });
 }
 
 /* ============================================================
@@ -1932,7 +1789,7 @@ async function bindProductVariantEvents(){
       const cid = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
       PRODUCT_VARIANTS[id].colors.push({ id:cid, fr: fr||ar, ar: ar||fr, hex: hexInput.value || "#c9a877" });
       try{
-        await persistVariantsOrShowError(id);
+        await persistVariantsOrShowError();
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -1940,7 +1797,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].colors = oldColors;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showBackendError(err, t("admin.backendWriteError"));
+        showToast(t("admin.backendWriteError"));
       }
     });
   });
@@ -1952,7 +1809,7 @@ async function bindProductVariantEvents(){
       const oldColors = PRODUCT_VARIANTS[id].colors.slice();
       PRODUCT_VARIANTS[id].colors = PRODUCT_VARIANTS[id].colors.filter(c=>c.id!==cid);
       try{
-        await persistVariantsOrShowError(id);
+        await persistVariantsOrShowError();
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -1960,7 +1817,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].colors = oldColors;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showBackendError(err, t("admin.backendWriteError"));
+        showToast(t("admin.backendWriteError"));
       }
     });
   });
@@ -1975,8 +1832,8 @@ async function bindProductVariantEvents(){
       if(field==="hex"){ c.hex = val || c.hex; }
       else if(val){ c[field] = val; }
       else{ inp.value = old; return; }
-      try{ await persistVariantsOrShowError(pid); renderProducts(); }
-      catch(err){ c[field]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showBackendError(err, t("admin.backendWriteError")); }
+      try{ await persistVariantsOrShowError(); renderProducts(); }
+      catch(err){ c[field]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showToast(t("admin.backendWriteError")); }
     });
   });
   document.querySelectorAll("[data-addsize]").forEach(btn=>{
@@ -1989,7 +1846,7 @@ async function bindProductVariantEvents(){
       const oldSizes = PRODUCT_VARIANTS[id].sizes.slice();
       PRODUCT_VARIANTS[id].sizes.push(val);
       try{
-        await persistVariantsOrShowError(id);
+        await persistVariantsOrShowError();
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -1997,7 +1854,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].sizes = oldSizes;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showBackendError(err, t("admin.backendWriteError"));
+        showToast(t("admin.backendWriteError"));
       }
     });
   });
@@ -2010,7 +1867,7 @@ async function bindProductVariantEvents(){
       const oldSizes = PRODUCT_VARIANTS[id].sizes.slice();
       PRODUCT_VARIANTS[id].sizes = PRODUCT_VARIANTS[id].sizes.filter(s=>s!==size);
       try{
-        await persistVariantsOrShowError(id);
+        await persistVariantsOrShowError();
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -2018,7 +1875,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].sizes = oldSizes;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showBackendError(err, t("admin.backendWriteError"));
+        showToast(t("admin.backendWriteError"));
       }
     });
   });
@@ -2033,8 +1890,224 @@ async function bindProductVariantEvents(){
       const idx = arr.indexOf(old);
       if(idx<0) return;
       arr[idx] = val;
-      try{ await persistVariantsOrShowError(pid); renderProducts(); openProductId=pid; renderAdminProducts(); }
-      catch(err){ arr[idx]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showBackendError(err, t("admin.backendWriteError")); }
+      try{ await persistVariantsOrShowError(); renderProducts(); openProductId=pid; renderAdminProducts(); }
+      catch(err){ arr[idx]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showToast(t("admin.backendWriteError")); }
+    });
+  });
+}
+
+/* ============================================================
+   ADMIN — SAVE PRODUCT EDITS (name/desc/badge/price/enabled/
+   stock/pack fields). Reads the pf-* inputs rendered for this
+   product, updates PRODUCTS/I18N/PRODUCT_VARIANTS in memory,
+   persists to localStorage (offline fallback) and to Supabase
+   when authenticated, with rollback + toast on failure — same
+   pattern as the variant editors above.
+   ============================================================ */
+async function saveProductEdits(id){
+  const p = PRODUCTS.find(x=>x.id===id);
+  if(!p) return;
+  const val = (suffix)=> document.getElementById(`pf-${suffix}-${id}`).value.trim();
+  const nameFr = val("name-fr"), nameAr = val("name-ar");
+  const priceRaw = val("price");
+  const descFr = val("desc-fr"), descAr = val("desc-ar");
+  const badgeFr = val("badge-fr"), badgeAr = val("badge-ar");
+  const enabled = document.getElementById(`pf-enabled-${id}`).checked;
+  const stockRaw = val("stock");
+  const stock = stockRaw==="" ? null : Math.max(0, parseInt(stockRaw,10));
+  const packNameFr = val("pack-name-fr"), packNameAr = val("pack-name-ar");
+  const packPiecesRaw = val("pack-pieces");
+  const packPieces = packPiecesRaw==="" ? null : Math.max(0, parseInt(packPiecesRaw,10));
+  const packContentsFr = val("pack-contents-fr"), packContentsAr = val("pack-contents-ar");
+  const price = parseFloat(priceRaw);
+
+  const prev = {
+    price:p.price, enabled:p.enabled,
+    nameFr:I18N.fr[p.nameKey], nameAr:I18N.ar[p.nameKey],
+    descFr:I18N.fr[p.descKey], descAr:I18N.ar[p.descKey],
+    badgeFr:I18N.fr[p.badgeKey], badgeAr:I18N.ar[p.badgeKey],
+    variant: PRODUCT_VARIANTS[id] ? JSON.parse(JSON.stringify(PRODUCT_VARIANTS[id])) : null
+  };
+
+  if(nameFr) I18N.fr[p.nameKey] = nameFr;
+  if(nameAr) I18N.ar[p.nameKey] = nameAr;
+  if(!isNaN(price) && price>=0) p.price = price;
+  I18N.fr[p.descKey] = descFr;
+  I18N.ar[p.descKey] = descAr;
+  I18N.fr[p.badgeKey] = badgeFr;
+  I18N.ar[p.badgeKey] = badgeAr;
+  p.enabled = enabled;
+  if(PRODUCT_VARIANTS[id]){
+    PRODUCT_VARIANTS[id].stock = stock;
+    PRODUCT_VARIANTS[id].pack = (packNameFr || packNameAr || packPieces!=null || packContentsFr || packContentsAr) ? {
+      name:{ fr:packNameFr, ar:packNameAr },
+      pieces: packPieces,
+      contents:{ fr:packContentsFr, ar:packContentsAr }
+    } : null;
+  }
+
+  const overrides = loadProductOverrides();
+  overrides[id] = {
+    price:p.price, enabled:p.enabled,
+    name:{ fr:I18N.fr[p.nameKey], ar:I18N.ar[p.nameKey] },
+    desc:{ fr:I18N.fr[p.descKey], ar:I18N.ar[p.descKey] },
+    badge:{ fr:I18N.fr[p.badgeKey], ar:I18N.ar[p.badgeKey] }
+  };
+  saveProductOverrides(overrides);
+  saveProductVariants(PRODUCT_VARIANTS);
+
+  try{
+    if(isAdminAuthenticated()) await saveProductToSupabase(id);
+    renderProducts();
+    showToast(t("admin.productSaved"));
+  }catch(err){
+    p.price=prev.price; p.enabled=prev.enabled;
+    I18N.fr[p.nameKey]=prev.nameFr; I18N.ar[p.nameKey]=prev.nameAr;
+    I18N.fr[p.descKey]=prev.descFr; I18N.ar[p.descKey]=prev.descAr;
+    I18N.fr[p.badgeKey]=prev.badgeFr; I18N.ar[p.badgeKey]=prev.badgeAr;
+    if(prev.variant) PRODUCT_VARIANTS[id]=prev.variant;
+    saveProductVariants(PRODUCT_VARIANTS);
+    console.error(err);
+    showToast(t("admin.backendWriteError"));
+  }
+  openProductId = id;
+  renderAdminProducts();
+}
+
+/* ============================================================
+   ADMIN — PRODUCT IMAGE GALLERY EVENT BINDINGS (move/set primary/
+   replace/delete/add). Uploads and deletes go to Supabase Storage;
+   PRODUCT_IMAGE_GALLERY + PRODUCT_IMAGES[0] are kept in sync so the
+   public product grid updates immediately, with rollback + toast
+   on failure — same pattern as the variant editors above.
+   ============================================================ */
+function bindProductImageEvents(){
+  document.querySelectorAll("[data-imgmove]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const [id, idxStr, dir] = btn.dataset.imgmove.split(":");
+      const idx = parseInt(idxStr,10);
+      const gallery = PRODUCT_IMAGE_GALLERY[id];
+      if(!gallery) return;
+      const swapWith = dir==="up" ? idx-1 : idx+1;
+      if(swapWith<0 || swapWith>=gallery.length) return;
+      const old = gallery.slice();
+      [gallery[idx], gallery[swapWith]] = [gallery[swapWith], gallery[idx]];
+      syncPrimaryImage(id);
+      if(!saveProductGallery({...loadProductGallery(), [id]:gallery})){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); showToast(t("admin.imgSaveError")); return;
+      }
+      try{
+        if(isAdminAuthenticated()) await saveProductToSupabase(id);
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:old});
+        console.error(err); showToast(t("admin.backendWriteError"));
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-imgprimary]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const [id, idxStr] = btn.dataset.imgprimary.split(":");
+      const idx = parseInt(idxStr,10);
+      const gallery = PRODUCT_IMAGE_GALLERY[id];
+      if(!gallery || !gallery[idx]) return;
+      const old = gallery.slice();
+      const [chosen] = gallery.splice(idx,1);
+      gallery.unshift(chosen);
+      syncPrimaryImage(id);
+      if(!saveProductGallery({...loadProductGallery(), [id]:gallery})){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); showToast(t("admin.imgSaveError")); return;
+      }
+      try{
+        if(isAdminAuthenticated()) await saveProductToSupabase(id);
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:old});
+        console.error(err); showToast(t("admin.backendWriteError"));
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-imgreplace]").forEach(inp=>{
+    inp.addEventListener("click", e=> e.stopPropagation());
+    inp.addEventListener("change", async ()=>{
+      const file = inp.files && inp.files[0];
+      if(!file) return;
+      const [id, idxStr] = inp.dataset.imgreplace.split(":");
+      const idx = parseInt(idxStr,10);
+      const gallery = PRODUCT_IMAGE_GALLERY[id];
+      if(!gallery){ inp.value=""; return; }
+      const oldUrl = gallery[idx];
+      const oldGallery = gallery.slice();
+      try{
+        const newUrl = await uploadProductImageToStorage(file, id);
+        gallery[idx] = newUrl;
+        syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:gallery});
+        if(isAdminAuthenticated()) await saveProductToSupabase(id);
+        if(oldUrl) deleteProductImageFromStorage(oldUrl).catch(()=>{});
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=oldGallery; syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:oldGallery});
+        console.error(err); showToast(t("admin.backendWriteError"));
+      }
+      inp.value = "";
+    });
+  });
+
+  document.querySelectorAll("[data-imgdelete]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const [id, idxStr] = btn.dataset.imgdelete.split(":");
+      const idx = parseInt(idxStr,10);
+      const gallery = PRODUCT_IMAGE_GALLERY[id];
+      if(!gallery || gallery.length<=1){ showToast(t("admin.imgDeleteLastError")); return; }
+      const oldGallery = gallery.slice();
+      const [removed] = gallery.splice(idx,1);
+      syncPrimaryImage(id);
+      if(!saveProductGallery({...loadProductGallery(), [id]:gallery})){
+        PRODUCT_IMAGE_GALLERY[id]=oldGallery; syncPrimaryImage(id); showToast(t("admin.imgSaveError")); return;
+      }
+      try{
+        if(isAdminAuthenticated()) await saveProductToSupabase(id);
+        if(removed) deleteProductImageFromStorage(removed).catch(()=>{});
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=oldGallery; syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:oldGallery});
+        console.error(err); showToast(t("admin.backendWriteError"));
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-imgadd]").forEach(inp=>{
+    inp.addEventListener("click", e=> e.stopPropagation());
+    inp.addEventListener("change", async ()=>{
+      const file = inp.files && inp.files[0];
+      if(!file) return;
+      const id = inp.dataset.imgadd;
+      if(!PRODUCT_IMAGE_GALLERY[id]) PRODUCT_IMAGE_GALLERY[id] = [];
+      const gallery = PRODUCT_IMAGE_GALLERY[id];
+      const oldGallery = gallery.slice();
+      try{
+        const newUrl = await uploadProductImageToStorage(file, id);
+        gallery.push(newUrl);
+        syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:gallery});
+        if(isAdminAuthenticated()) await saveProductToSupabase(id);
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=oldGallery; syncPrimaryImage(id);
+        saveProductGallery({...loadProductGallery(), [id]:oldGallery});
+        console.error(err); showToast(t("admin.backendWriteError"));
+      }
+      inp.value = "";
     });
   });
 }
