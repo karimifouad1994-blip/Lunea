@@ -1747,7 +1747,7 @@ function renderAdminProducts(){
           </div>
         </div>
 
-        <button class="btn btn-primary" data-save="${p.id}">${t("admin.save")}</button>
+        <button type="button" class="btn btn-primary" data-save="${p.id}">${t("admin.save")}</button>
       </div>
     </div>`;
   }).join("");
@@ -1762,7 +1762,7 @@ function renderAdminProducts(){
     });
   });
   document.querySelectorAll("[data-save]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{ e.stopPropagation(); saveProductEdits(btn.dataset.save); });
+    btn.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation(); await saveProductEdits(String(btn.dataset.save)); });
   });
   bindProductImageEvents();
   bindProductVariantEvents();
@@ -1905,14 +1905,20 @@ async function bindProductVariantEvents(){
    pattern as the variant editors above.
    ============================================================ */
 async function saveProductEdits(id){
-  const p = PRODUCTS.find(x=>x.id===id);
-  if(!p) return;
-  const val = (suffix)=> document.getElementById(`pf-${suffix}-${id}`).value.trim();
+  id = String(id);
+  const p = PRODUCTS.find(x=>String(x.id)===id);
+  if(!p){ showToast("Produit introuvable"); return; }
+  const getField = (suffix)=>{
+    const el = document.getElementById(`pf-${suffix}-${id}`);
+    if(!el) throw new Error(`Champ Admin introuvable: pf-${suffix}-${id}`);
+    return el;
+  };
+  const val = (suffix)=> getField(suffix).value.trim();
   const nameFr = val("name-fr"), nameAr = val("name-ar");
   const priceRaw = val("price");
   const descFr = val("desc-fr"), descAr = val("desc-ar");
   const badgeFr = val("badge-fr"), badgeAr = val("badge-ar");
-  const enabled = document.getElementById(`pf-enabled-${id}`).checked;
+  const enabled = getField("enabled").checked;
   const stockRaw = val("stock");
   const stock = stockRaw==="" ? null : Math.max(0, parseInt(stockRaw,10));
   const packNameFr = val("pack-name-fr"), packNameAr = val("pack-name-ar");
@@ -1967,8 +1973,8 @@ async function saveProductEdits(id){
     I18N.fr[p.badgeKey]=prev.badgeFr; I18N.ar[p.badgeKey]=prev.badgeAr;
     if(prev.variant) PRODUCT_VARIANTS[id]=prev.variant;
     saveProductVariants(PRODUCT_VARIANTS);
-    console.error(err);
-    showToast(t("admin.backendWriteError"));
+    console.error("saveProductEdits failed:", err);
+    showToast(err?.message || t("admin.backendWriteError"));
   }
   openProductId = id;
   renderAdminProducts();
