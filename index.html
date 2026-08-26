@@ -529,13 +529,14 @@ function buildProductVariants(){
   return result;
 }
 PRODUCT_VARIANTS = buildProductVariants();
-function persistVariantsOrShowError(){
+async function persistVariantsOrShowError(){
   const ok = saveProductVariants(PRODUCT_VARIANTS);
-  if(!ok) showToast(t("admin.imgSaveError"));
-  if(ok && isAdminAuthenticated()){
-    Object.keys(PRODUCT_VARIANTS).forEach(id=>saveProductToSupabase(id).catch(e=>console.error(e)));
+  if(!ok){ showToast(t("admin.imgSaveError")); return false; }
+  if(isAdminAuthenticated()){
+    const ids=Object.keys(PRODUCT_VARIANTS);
+    await Promise.all(ids.map(id=>saveProductToSupabase(id)));
   }
-  return ok;
+  return true;
 }
 function getProductColors(id){ return (PRODUCT_VARIANTS[id] && PRODUCT_VARIANTS[id].colors) || []; }
 function getProductSizes(id){ return (PRODUCT_VARIANTS[id] && PRODUCT_VARIANTS[id].sizes) || []; }
@@ -1770,9 +1771,9 @@ function renderAdminProducts(){
    Add/remove/rename colors and sizes, persisted immediately
    (same pattern as the image gallery editor above).
    ============================================================ */
-function bindProductVariantEvents(){
+async function bindProductVariantEvents(){
   document.querySelectorAll("[data-addcolor]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const id = btn.dataset.addcolor;
       const frInput = document.getElementById(`newcolor-fr-${id}`);
@@ -1780,273 +1781,115 @@ function bindProductVariantEvents(){
       const hexInput = document.getElementById(`newcolor-hex-${id}`);
       const fr = frInput.value.trim(), ar = arInput.value.trim();
       if(!fr && !ar) return;
+      const oldColors = PRODUCT_VARIANTS[id].colors.slice();
       const cid = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
       PRODUCT_VARIANTS[id].colors.push({ id:cid, fr: fr||ar, ar: ar||fr, hex: hexInput.value || "#c9a877" });
-      persistVariantsOrShowError();
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
+      try{
+        await persistVariantsOrShowError();
+        renderProducts();
+        openProductId = id;
+        renderAdminProducts();
+      }catch(err){
+        PRODUCT_VARIANTS[id].colors = oldColors;
+        saveProductVariants(PRODUCT_VARIANTS);
+        console.error(err);
+        showToast(t("admin.backendWriteError"));
+      }
     });
   });
   document.querySelectorAll("[data-removecolor]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const [id, cid] = btn.dataset.removecolor.split(":");
       if(PRODUCT_VARIANTS[id].colors.length<=1) return;
+      const oldColors = PRODUCT_VARIANTS[id].colors.slice();
       PRODUCT_VARIANTS[id].colors = PRODUCT_VARIANTS[id].colors.filter(c=>c.id!==cid);
-      persistVariantsOrShowError();
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
+      try{
+        await persistVariantsOrShowError();
+        renderProducts();
+        openProductId = id;
+        renderAdminProducts();
+      }catch(err){
+        PRODUCT_VARIANTS[id].colors = oldColors;
+        saveProductVariants(PRODUCT_VARIANTS);
+        console.error(err);
+        showToast(t("admin.backendWriteError"));
+      }
     });
   });
   document.querySelectorAll(".admin-variant-input[data-colorfield]").forEach(inp=>{
     inp.addEventListener("click", e=> e.stopPropagation());
-    inp.addEventListener("change", ()=>{
+    inp.addEventListener("change", async ()=>{
       const pid = inp.dataset.pid, cid = inp.dataset.cid, field = inp.dataset.colorfield;
       const c = (PRODUCT_VARIANTS[pid] && PRODUCT_VARIANTS[pid].colors.find(c=>c.id===cid));
       if(!c) return;
+      const old = c[field];
       const val = inp.value.trim();
       if(field==="hex"){ c.hex = val || c.hex; }
       else if(val){ c[field] = val; }
-      else{ inp.value = c[field]; return; }
-      persistVariantsOrShowError();
-      renderProducts();
+      else{ inp.value = old; return; }
+      try{ await persistVariantsOrShowError(); renderProducts(); }
+      catch(err){ c[field]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showToast(t("admin.backendWriteError")); }
     });
   });
   document.querySelectorAll("[data-addsize]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const id = btn.dataset.addsize;
       const input = document.getElementById(`newsize-${id}`);
       const val = input.value.trim();
       if(!val || PRODUCT_VARIANTS[id].sizes.includes(val)){ input.value=""; return; }
+      const oldSizes = PRODUCT_VARIANTS[id].sizes.slice();
       PRODUCT_VARIANTS[id].sizes.push(val);
-      persistVariantsOrShowError();
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
+      try{
+        await persistVariantsOrShowError();
+        renderProducts();
+        openProductId = id;
+        renderAdminProducts();
+      }catch(err){
+        PRODUCT_VARIANTS[id].sizes = oldSizes;
+        saveProductVariants(PRODUCT_VARIANTS);
+        console.error(err);
+        showToast(t("admin.backendWriteError"));
+      }
     });
   });
   document.querySelectorAll("[data-removesize]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const idx = btn.dataset.removesize.indexOf(":");
       const id = btn.dataset.removesize.slice(0, idx), size = btn.dataset.removesize.slice(idx+1);
       if(PRODUCT_VARIANTS[id].sizes.length<=1) return;
+      const oldSizes = PRODUCT_VARIANTS[id].sizes.slice();
       PRODUCT_VARIANTS[id].sizes = PRODUCT_VARIANTS[id].sizes.filter(s=>s!==size);
-      persistVariantsOrShowError();
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
+      try{
+        await persistVariantsOrShowError();
+        renderProducts();
+        openProductId = id;
+        renderAdminProducts();
+      }catch(err){
+        PRODUCT_VARIANTS[id].sizes = oldSizes;
+        saveProductVariants(PRODUCT_VARIANTS);
+        console.error(err);
+        showToast(t("admin.backendWriteError"));
+      }
     });
   });
   document.querySelectorAll(".admin-variant-input[data-sizeold]").forEach(inp=>{
     inp.addEventListener("click", e=> e.stopPropagation());
-    inp.addEventListener("change", ()=>{
+    inp.addEventListener("change", async ()=>{
       const pid = inp.dataset.pid, old = inp.dataset.sizeold;
       const val = inp.value.trim();
       const arr = PRODUCT_VARIANTS[pid] && PRODUCT_VARIANTS[pid].sizes;
       if(!arr) return;
       if(!val || (val!==old && arr.includes(val))){ inp.value = old; return; }
       const idx = arr.indexOf(old);
-      if(idx>-1) arr[idx] = val;
-      persistVariantsOrShowError();
-      renderProducts();
-      openProductId = pid;
-      renderAdminProducts();
+      if(idx<0) return;
+      arr[idx] = val;
+      try{ await persistVariantsOrShowError(); renderProducts(); openProductId=pid; renderAdminProducts(); }
+      catch(err){ arr[idx]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showToast(t("admin.backendWriteError")); }
     });
   });
-}
-
-async function persistGalleryOrShowError(id){
-  const ok = saveProductGallery(PRODUCT_IMAGE_GALLERY);
-  if(!ok){ showToast(t("admin.imgSaveError")); return false; }
-  if(id && isAdminAuthenticated()) await saveProductToSupabase(id);
-  return true;
-}
-
-async function bindProductImageEvents(){
-  document.querySelectorAll("[data-imgmove]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      const [id, idxStr, dir] = btn.dataset.imgmove.split(":");
-      const idx = parseInt(idxStr, 10);
-      const gallery = PRODUCT_IMAGE_GALLERY[id];
-      const swapWith = dir==="up" ? idx-1 : idx+1;
-      if(!gallery || swapWith<0 || swapWith>=gallery.length) return;
-      [gallery[idx], gallery[swapWith]] = [gallery[swapWith], gallery[idx]];
-      syncPrimaryImage(id);
-      try{ await persistGalleryOrShowError(id); }
-      catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
-    });
-  });
-
-  document.querySelectorAll("[data-imgprimary]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      const [id, idxStr] = btn.dataset.imgprimary.split(":");
-      const idx = parseInt(idxStr, 10);
-      const gallery = PRODUCT_IMAGE_GALLERY[id];
-      if(!gallery || !gallery[idx]) return;
-      const [chosen] = gallery.splice(idx, 1);
-      gallery.unshift(chosen);
-      syncPrimaryImage(id);
-      try{ await persistGalleryOrShowError(id); showToast(t("admin.productSaved")); }
-      catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
-    });
-  });
-
-  document.querySelectorAll("[data-imgdelete]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      const [id, idxStr] = btn.dataset.imgdelete.split(":");
-      const idx = parseInt(idxStr, 10);
-      const gallery = PRODUCT_IMAGE_GALLERY[id];
-      if(!gallery || gallery.length<=1){ showToast(t("admin.imgDeleteLastError")); return; }
-      const oldUrl = gallery[idx];
-      gallery.splice(idx, 1);
-      syncPrimaryImage(id);
-      try{
-        await persistGalleryOrShowError(id);
-        await deleteProductImageFromStorage(oldUrl);
-        showToast(t("admin.productSaved"));
-      }catch(err){
-        console.error(err);
-        gallery.splice(idx, 0, oldUrl);
-        syncPrimaryImage(id);
-        saveProductGallery(PRODUCT_IMAGE_GALLERY);
-        showToast(t("admin.backendWriteError"));
-      }
-      renderProducts();
-      openProductId = id;
-      renderAdminProducts();
-    });
-  });
-
-  document.querySelectorAll("[data-imgreplace]").forEach(input=>{
-    input.addEventListener("click", (e)=> e.stopPropagation());
-    input.addEventListener("change", async (e)=>{
-      e.stopPropagation();
-      const file = input.files && input.files[0];
-      if(!file) return;
-      const [id, idxStr] = input.dataset.imgreplace.split(":");
-      const idx = parseInt(idxStr, 10);
-      try{
-        const gallery = PRODUCT_IMAGE_GALLERY[id];
-        if(!gallery) return;
-        const oldUrl = gallery[idx];
-        const publicUrl = await uploadProductImageToStorage(file,id);
-        gallery[idx] = publicUrl;
-        syncPrimaryImage(id);
-        try{
-          await persistGalleryOrShowError(id);
-        }catch(saveErr){
-          gallery[idx]=oldUrl; syncPrimaryImage(id);
-          await deleteProductImageFromStorage(publicUrl);
-          throw saveErr;
-        }
-        if(oldUrl && oldUrl!==publicUrl) await deleteProductImageFromStorage(oldUrl);
-        renderProducts();
-        showToast(t("admin.productSaved"));
-        openProductId = id;
-        renderAdminProducts();
-      }catch(err){
-        console.error(err);
-        showToast(t("admin.backendWriteError"));
-      }finally{ input.value=""; }
-    });
-  });
-
-  document.querySelectorAll("[data-imgadd]").forEach(input=>{
-    input.addEventListener("click", (e)=> e.stopPropagation());
-    input.addEventListener("change", async (e)=>{
-      e.stopPropagation();
-      const file = input.files && input.files[0];
-      if(!file) return;
-      const id = input.dataset.imgadd;
-      try{
-        const publicUrl = await uploadProductImageToStorage(file,id);
-        if(!PRODUCT_IMAGE_GALLERY[id]) PRODUCT_IMAGE_GALLERY[id] = [];
-        PRODUCT_IMAGE_GALLERY[id].push(publicUrl);
-        syncPrimaryImage(id);
-        try{
-          await persistGalleryOrShowError(id);
-        }catch(saveErr){
-          PRODUCT_IMAGE_GALLERY[id].pop(); syncPrimaryImage(id);
-          await deleteProductImageFromStorage(publicUrl);
-          throw saveErr;
-        }
-        renderProducts();
-        showToast(t("admin.productSaved"));
-        openProductId = id;
-        renderAdminProducts();
-      }catch(err){
-        console.error(err);
-        showToast(t("admin.backendWriteError"));
-      }finally{ input.value=""; }
-    });
-  });
-}
-
-function saveProductEdits(id){
-  const p = PRODUCTS.find(x=>x.id===id);
-  if(!p) return;
-  const nameFr = document.getElementById(`pf-name-fr-${id}`).value.trim();
-  const nameAr = document.getElementById(`pf-name-ar-${id}`).value.trim();
-  const priceVal = parseFloat(document.getElementById(`pf-price-${id}`).value);
-  const price = isNaN(priceVal) ? p.price : priceVal;
-  const descFr = document.getElementById(`pf-desc-fr-${id}`).value.trim();
-  const descAr = document.getElementById(`pf-desc-ar-${id}`).value.trim();
-  const badgeFr = document.getElementById(`pf-badge-fr-${id}`).value.trim();
-  const badgeAr = document.getElementById(`pf-badge-ar-${id}`).value.trim();
-  const enabled = document.getElementById(`pf-enabled-${id}`).checked;
-
-  if(nameFr) I18N.fr[p.nameKey] = nameFr;
-  if(nameAr) I18N.ar[p.nameKey] = nameAr;
-  if(descFr) I18N.fr[p.descKey] = descFr;
-  if(descAr) I18N.ar[p.descKey] = descAr;
-  if(badgeFr) I18N.fr[p.badgeKey] = badgeFr;
-  if(badgeAr) I18N.ar[p.badgeKey] = badgeAr;
-  p.price = price;
-  p.enabled = enabled;
-
-  const overrides = loadProductOverrides();
-  overrides[id] = {
-    name:{ fr: I18N.fr[p.nameKey], ar: I18N.ar[p.nameKey] },
-    desc:{ fr: I18N.fr[p.descKey], ar: I18N.ar[p.descKey] },
-    badge:{ fr: I18N.fr[p.badgeKey], ar: I18N.ar[p.badgeKey] },
-    price, enabled
-  };
-  saveProductOverrides(overrides);
-
-  const stockRaw = document.getElementById(`pf-stock-${id}`).value.trim();
-  const stock = stockRaw==="" ? null : Math.max(0, parseInt(stockRaw,10)||0);
-  const packNameFr = document.getElementById(`pf-pack-name-fr-${id}`).value.trim();
-  const packNameAr = document.getElementById(`pf-pack-name-ar-${id}`).value.trim();
-  const packPiecesRaw = document.getElementById(`pf-pack-pieces-${id}`).value.trim();
-  const packPieces = packPiecesRaw==="" ? null : Math.max(0, parseInt(packPiecesRaw,10)||0);
-  const packContentsFr = document.getElementById(`pf-pack-contents-fr-${id}`).value.trim();
-  const packContentsAr = document.getElementById(`pf-pack-contents-ar-${id}`).value.trim();
-  const hasPack = packNameFr || packNameAr || packPieces!=null || packContentsFr || packContentsAr;
-  PRODUCT_VARIANTS[id].stock = stock;
-  PRODUCT_VARIANTS[id].pack = hasPack ? {
-    name:{ fr:packNameFr, ar:packNameAr },
-    pieces: packPieces,
-    contents:{ fr:packContentsFr, ar:packContentsAr }
-  } : null;
-  persistVariantsOrShowError();
-
-  saveProductToSupabase(id).then(()=>showToast(t("admin.productSaved"))).catch(err=>{ console.error(err); showToast(t("admin.backendWriteError")); });
-  renderProducts();
-  openProductId = id;
-  renderAdminProducts();
 }
 
 /* ============================================================
