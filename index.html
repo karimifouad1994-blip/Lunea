@@ -1667,6 +1667,149 @@ function renderProductImagesHTML(p){
   `;
 }
 
+
+async function saveProductEdits(id){
+  if(!isAdminAuthenticated()){ showToast(t("admin.backendWriteError")); return; }
+  const p=PRODUCTS.find(x=>x.id===id);
+  if(!p) return;
+  const old={
+    price:p.price, enabled:p.enabled,
+    nameFr:I18N.fr[p.nameKey], nameAr:I18N.ar[p.nameKey],
+    descFr:I18N.fr[p.descKey], descAr:I18N.ar[p.descKey],
+    badgeFr:I18N.fr[p.badgeKey], badgeAr:I18N.ar[p.badgeKey],
+    variants:JSON.parse(JSON.stringify(PRODUCT_VARIANTS[id]||{}))
+  };
+  try{
+    p.price=Number(document.getElementById(`pf-price-${id}`).value)||0;
+    p.enabled=document.getElementById(`pf-enabled-${id}`).checked;
+    I18N.fr[p.nameKey]=document.getElementById(`pf-name-fr-${id}`).value.trim();
+    I18N.ar[p.nameKey]=document.getElementById(`pf-name-ar-${id}`).value.trim();
+    I18N.fr[p.descKey]=document.getElementById(`pf-desc-fr-${id}`).value.trim();
+    I18N.ar[p.descKey]=document.getElementById(`pf-desc-ar-${id}`).value.trim();
+    I18N.fr[p.badgeKey]=document.getElementById(`pf-badge-fr-${id}`).value.trim();
+    I18N.ar[p.badgeKey]=document.getElementById(`pf-badge-ar-${id}`).value.trim();
+    const v=PRODUCT_VARIANTS[id] || (PRODUCT_VARIANTS[id]={colors:[],sizes:[],stock:null,pack:null});
+    const stockEl=document.getElementById(`pf-stock-${id}`);
+    v.stock=stockEl && stockEl.value.trim()!=='' ? Number(stockEl.value) : null;
+    const piecesEl=document.getElementById(`pf-pack-pieces-${id}`);
+    const packNameFr=document.getElementById(`pf-pack-name-fr-${id}`);
+    const packNameAr=document.getElementById(`pf-pack-name-ar-${id}`);
+    const packContentsFr=document.getElementById(`pf-pack-contents-fr-${id}`);
+    const packContentsAr=document.getElementById(`pf-pack-contents-ar-${id}`);
+    if(piecesEl && piecesEl.value.trim()!==''){
+      v.pack=v.pack||{};
+      v.pack.pieces=Number(piecesEl.value)||0;
+      v.pack.name={fr:packNameFr?.value.trim()||'',ar:packNameAr?.value.trim()||''};
+      v.pack.contents={fr:packContentsFr?.value.trim()||'',ar:packContentsAr?.value.trim()||''};
+    }else if(v.pack){ v.pack=null; }
+    saveProductVariants(PRODUCT_VARIANTS);
+    await saveProductToSupabase(id);
+    renderProducts();
+    openProductId=id;
+    renderAdminProducts();
+    showToast(t("admin.settingsSaved"));
+  }catch(err){
+    p.price=old.price; p.enabled=old.enabled;
+    I18N.fr[p.nameKey]=old.nameFr; I18N.ar[p.nameKey]=old.nameAr;
+    I18N.fr[p.descKey]=old.descFr; I18N.ar[p.descKey]=old.descAr;
+    I18N.fr[p.badgeKey]=old.badgeFr; I18N.ar[p.badgeKey]=old.badgeAr;
+    PRODUCT_VARIANTS[id]=old.variants; saveProductVariants(PRODUCT_VARIANTS);
+    console.error("saveProductEdits",err);
+    showToast(t("admin.backendWriteError"));
+  }
+}
+
+function bindProductImageEvents(){
+  document.querySelectorAll("[data-imgadd]").forEach(input=>{
+    input.addEventListener("change", async ()=>{
+      const id=input.dataset.imgadd;
+      const file=input.files && input.files[0]; if(!file) return;
+      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
+      try{
+        const url=await uploadProductImageToStorage(file,id);
+        PRODUCT_IMAGE_GALLERY[id]=old.concat(url);
+        syncPrimaryImage(id);
+        await saveProductToSupabase(id);
+        saveProductGallery(PRODUCT_IMAGE_GALLERY);
+        renderProducts(); openProductId=id; renderAdminProducts();
+        showToast(t("admin.settingsSaved"));
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
+        console.error("add image",err); showToast(t("admin.backendWriteError"));
+      }finally{ input.value=""; }
+    });
+  });
+  document.querySelectorAll("[data-imgreplace]").forEach(input=>{
+    input.addEventListener("change", async ()=>{
+      const [id,idxRaw]=input.dataset.imgreplace.split(":"); const idx=Number(idxRaw);
+      const file=input.files && input.files[0]; if(!file) return;
+      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
+      try{
+        const url=await uploadProductImageToStorage(file,id);
+        PRODUCT_IMAGE_GALLERY[id][idx]=url; syncPrimaryImage(id);
+        await saveProductToSupabase(id);
+        try{ await deleteProductImageFromStorage(old[idx]); }catch(e){ console.warn("old image cleanup",e); }
+        saveProductGallery(PRODUCT_IMAGE_GALLERY);
+        renderProducts(); openProductId=id; renderAdminProducts(); showToast(t("admin.settingsSaved"));
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
+        console.error("replace image",err); showToast(t("admin.backendWriteError"));
+      }finally{ input.value=""; }
+    });
+  });
+  document.querySelectorAll("[data-imgdelete]").forEach(btn=>{
+    btn.addEventListener("click", async e=>{
+      e.stopPropagation();
+      const [id,idxRaw]=btn.dataset.imgdelete.split(":"); const idx=Number(idxRaw);
+      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
+      if(old.length<=1){ showToast(t("admin.imgDeleteLastError")); return; }
+      try{
+        PRODUCT_IMAGE_GALLERY[id]=old.filter((_,i)=>i!==idx); syncPrimaryImage(id);
+        await saveProductToSupabase(id);
+        await deleteProductImageFromStorage(old[idx]);
+        saveProductGallery(PRODUCT_IMAGE_GALLERY);
+        renderProducts(); openProductId=id; renderAdminProducts(); showToast(t("admin.settingsSaved"));
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
+        console.error("delete image",err); showToast(t("admin.backendWriteError"));
+      }
+    });
+  });
+  document.querySelectorAll("[data-imgmove]").forEach(btn=>{
+    btn.addEventListener("click", async e=>{
+      e.stopPropagation();
+      const [id,idxRaw,direction]=btn.dataset.imgmove.split(":"); const idx=Number(idxRaw);
+      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
+      const target=direction==="up"?idx-1:idx+1;
+      if(target<0 || target>=old.length) return;
+      const next=old.slice(); [next[idx],next[target]]=[next[target],next[idx]];
+      PRODUCT_IMAGE_GALLERY[id]=next; syncPrimaryImage(id);
+      try{
+        await saveProductToSupabase(id); saveProductGallery(PRODUCT_IMAGE_GALLERY);
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showToast(t("admin.backendWriteError"));
+      }
+    });
+  });
+  document.querySelectorAll("[data-imgprimary]").forEach(btn=>{
+    btn.addEventListener("click", async e=>{
+      e.stopPropagation();
+      const [id,idxRaw]=btn.dataset.imgprimary.split(":"); const idx=Number(idxRaw);
+      const old=(PRODUCT_IMAGE_GALLERY[id]||[]).slice();
+      if(idx<=0 || idx>=old.length) return;
+      const next=old.slice(); const [chosen]=next.splice(idx,1); next.unshift(chosen);
+      PRODUCT_IMAGE_GALLERY[id]=next; syncPrimaryImage(id);
+      try{
+        await saveProductToSupabase(id); saveProductGallery(PRODUCT_IMAGE_GALLERY);
+        renderProducts(); openProductId=id; renderAdminProducts();
+      }catch(err){
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showToast(t("admin.backendWriteError"));
+      }
+    });
+  });
+}
+
 function renderAdminProducts(){
   let html = adminLanguageSwitcherHTML();
   html += adminTabsHTML("products");
