@@ -529,13 +529,10 @@ function buildProductVariants(){
   return result;
 }
 PRODUCT_VARIANTS = buildProductVariants();
-async function persistVariantsOrShowError(){
-  const ok = saveProductVariants(PRODUCT_VARIANTS);
-  if(!ok){ showToast(t("admin.imgSaveError")); return false; }
-  if(isAdminAuthenticated()){
-    const ids=Object.keys(PRODUCT_VARIANTS);
-    await Promise.all(ids.map(id=>saveProductToSupabase(id)));
-  }
+async function persistVariantsOrShowError(id){
+  if(!saveProductVariants(PRODUCT_VARIANTS)) throw new Error(t("admin.imgSaveError"));
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  await saveProductToSupabase(id);
   return true;
 }
 function getProductColors(id){ return (PRODUCT_VARIANTS[id] && PRODUCT_VARIANTS[id].colors) || []; }
@@ -1091,6 +1088,11 @@ function showToast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=> el.classList.remove("show"), 2600);
 }
+function showBackendError(err, fallback){
+  console.error(err);
+  const msg = err && err.message ? err.message : (fallback || "Erreur inconnue");
+  showToast(msg);
+}
 
 /* ============================================================
    VARIANT MODAL (choose color/size/qty, add to cart)
@@ -1428,7 +1430,7 @@ document.getElementById("submitOrder").addEventListener("click", async ()=>{
   }catch(err){
     console.error("Supabase order save failed:", err);
     submitBtn.disabled=false;
-    showToast(t("admin.backendWriteError"));
+    showBackendError(err, t("admin.backendWriteError"));
     return;
   }
   const orders = loadOrders();
@@ -1576,7 +1578,7 @@ async function renderAdminOrders(){
         await updateOrderStatusInSupabase(orderCode,status);
         const orders2=loadOrders(); const ord=orders2.find(x=>x.id===orderCode); if(ord){ord.status=status; saveOrders(orders2);}
         await renderAdminOrders();
-      }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); sel.disabled=false; }
+      }catch(err){ console.error(err); showBackendError(err, t("admin.backendWriteError")); sel.disabled=false; }
     });
   });
   const logoutBtn = document.getElementById("adminLogoutBtn");
@@ -1624,7 +1626,7 @@ async function renderAdminSettings(){
     const btn=document.getElementById("saveSiteSettingsBtn"); const lang=document.getElementById("siteDefaultLanguage").value;
     btn.disabled=true;
     try{ await saveSiteDefaultLanguage(lang); showToast(t("admin.settingsSaved")); }
-    catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
+    catch(err){ console.error(err); showBackendError(err, t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
   });
   document.getElementById("saveFrontTextsBtn").addEventListener("click",async()=>{
@@ -1632,7 +1634,7 @@ async function renderAdminSettings(){
     const content={fr:{},ar:{}};
     keys.forEach(([key])=>{ const safe=key.replace(/[^a-z0-9]+/gi,'-'); content.fr[key]=document.getElementById(`front-fr-${safe}`).value.trim(); content.ar[key]=document.getElementById(`front-ar-${safe}`).value.trim(); });
     try{ await saveSiteContent(content); applyTranslations(); showToast(t("admin.settingsSaved")); }
-    catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
+    catch(err){ console.error(err); showBackendError(err, t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
   });
 }
@@ -1715,7 +1717,7 @@ async function saveProductEdits(id){
     I18N.fr[p.badgeKey]=old.badgeFr; I18N.ar[p.badgeKey]=old.badgeAr;
     PRODUCT_VARIANTS[id]=old.variants; saveProductVariants(PRODUCT_VARIANTS);
     console.error("saveProductEdits",err);
-    showToast(t("admin.backendWriteError"));
+    showBackendError(err, t("admin.backendWriteError"));
   }
 }
 
@@ -1735,7 +1737,7 @@ function bindProductImageEvents(){
         showToast(t("admin.settingsSaved"));
       }catch(err){
         PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
-        console.error("add image",err); showToast(t("admin.backendWriteError"));
+        console.error("add image",err); showBackendError(err, t("admin.backendWriteError"));
       }finally{ input.value=""; }
     });
   });
@@ -1753,7 +1755,7 @@ function bindProductImageEvents(){
         renderProducts(); openProductId=id; renderAdminProducts(); showToast(t("admin.settingsSaved"));
       }catch(err){
         PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
-        console.error("replace image",err); showToast(t("admin.backendWriteError"));
+        console.error("replace image",err); showBackendError(err, t("admin.backendWriteError"));
       }finally{ input.value=""; }
     });
   });
@@ -1771,7 +1773,7 @@ function bindProductImageEvents(){
         renderProducts(); openProductId=id; renderAdminProducts(); showToast(t("admin.settingsSaved"));
       }catch(err){
         PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id);
-        console.error("delete image",err); showToast(t("admin.backendWriteError"));
+        console.error("delete image",err); showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -1788,7 +1790,7 @@ function bindProductImageEvents(){
         await saveProductToSupabase(id); saveProductGallery(PRODUCT_IMAGE_GALLERY);
         renderProducts(); openProductId=id; renderAdminProducts();
       }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showToast(t("admin.backendWriteError"));
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -1804,7 +1806,7 @@ function bindProductImageEvents(){
         await saveProductToSupabase(id); saveProductGallery(PRODUCT_IMAGE_GALLERY);
         renderProducts(); openProductId=id; renderAdminProducts();
       }catch(err){
-        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showToast(t("admin.backendWriteError"));
+        PRODUCT_IMAGE_GALLERY[id]=old; syncPrimaryImage(id); console.error(err); showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -1901,12 +1903,12 @@ function renderAdminProducts(){
     });
   });
   document.querySelectorAll("[data-save]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{ e.stopPropagation(); saveProductEdits(btn.dataset.save); });
+    btn.addEventListener("click", async (e)=>{ e.stopPropagation(); await saveProductEdits(btn.dataset.save); });
   });
   bindProductImageEvents();
   bindProductVariantEvents();
   const logoutBtn = document.getElementById("adminLogoutBtn");
-  if(logoutBtn) logoutBtn.addEventListener("click", ()=>{ sessionStorage.removeItem("lunea_admin_ok"); renderAdminLogin(); });
+  if(logoutBtn) logoutBtn.addEventListener("click", ()=>{ signOutAdmin(); });
 }
 
 /* ============================================================
@@ -1928,7 +1930,7 @@ async function bindProductVariantEvents(){
       const cid = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
       PRODUCT_VARIANTS[id].colors.push({ id:cid, fr: fr||ar, ar: ar||fr, hex: hexInput.value || "#c9a877" });
       try{
-        await persistVariantsOrShowError();
+        await persistVariantsOrShowError(id);
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -1936,7 +1938,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].colors = oldColors;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showToast(t("admin.backendWriteError"));
+        showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -1948,7 +1950,7 @@ async function bindProductVariantEvents(){
       const oldColors = PRODUCT_VARIANTS[id].colors.slice();
       PRODUCT_VARIANTS[id].colors = PRODUCT_VARIANTS[id].colors.filter(c=>c.id!==cid);
       try{
-        await persistVariantsOrShowError();
+        await persistVariantsOrShowError(id);
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -1956,7 +1958,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].colors = oldColors;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showToast(t("admin.backendWriteError"));
+        showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -1971,8 +1973,8 @@ async function bindProductVariantEvents(){
       if(field==="hex"){ c.hex = val || c.hex; }
       else if(val){ c[field] = val; }
       else{ inp.value = old; return; }
-      try{ await persistVariantsOrShowError(); renderProducts(); }
-      catch(err){ c[field]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showToast(t("admin.backendWriteError")); }
+      try{ await persistVariantsOrShowError(id); renderProducts(); }
+      catch(err){ c[field]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showBackendError(err, t("admin.backendWriteError")); }
     });
   });
   document.querySelectorAll("[data-addsize]").forEach(btn=>{
@@ -1985,7 +1987,7 @@ async function bindProductVariantEvents(){
       const oldSizes = PRODUCT_VARIANTS[id].sizes.slice();
       PRODUCT_VARIANTS[id].sizes.push(val);
       try{
-        await persistVariantsOrShowError();
+        await persistVariantsOrShowError(id);
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -1993,7 +1995,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].sizes = oldSizes;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showToast(t("admin.backendWriteError"));
+        showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -2006,7 +2008,7 @@ async function bindProductVariantEvents(){
       const oldSizes = PRODUCT_VARIANTS[id].sizes.slice();
       PRODUCT_VARIANTS[id].sizes = PRODUCT_VARIANTS[id].sizes.filter(s=>s!==size);
       try{
-        await persistVariantsOrShowError();
+        await persistVariantsOrShowError(id);
         renderProducts();
         openProductId = id;
         renderAdminProducts();
@@ -2014,7 +2016,7 @@ async function bindProductVariantEvents(){
         PRODUCT_VARIANTS[id].sizes = oldSizes;
         saveProductVariants(PRODUCT_VARIANTS);
         console.error(err);
-        showToast(t("admin.backendWriteError"));
+        showBackendError(err, t("admin.backendWriteError"));
       }
     });
   });
@@ -2029,8 +2031,8 @@ async function bindProductVariantEvents(){
       const idx = arr.indexOf(old);
       if(idx<0) return;
       arr[idx] = val;
-      try{ await persistVariantsOrShowError(); renderProducts(); openProductId=pid; renderAdminProducts(); }
-      catch(err){ arr[idx]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showToast(t("admin.backendWriteError")); }
+      try{ await persistVariantsOrShowError(id); renderProducts(); openProductId=pid; renderAdminProducts(); }
+      catch(err){ arr[idx]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showBackendError(err, t("admin.backendWriteError")); }
     });
   });
 }
