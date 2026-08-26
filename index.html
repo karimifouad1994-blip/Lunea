@@ -170,6 +170,8 @@ footer{background:var(--bg-deep); border-top:1px solid var(--line); padding:56px
 .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .select-pill-row{display:flex; flex-wrap:wrap; gap:8px;}
 .pill{padding:9px 16px; border-radius:20px; border:1px solid var(--line); font-size:12.5px; color:var(--ivory-dim); transition:all .22s ease;}
+.pack-color-choice{margin-bottom:12px;}
+.pack-color-choice>label{display:block; margin-bottom:7px; font-size:12px; color:var(--ivory-dim);}
 .pill.selected{background:var(--gold-soft); border-color:var(--gold-soft); color:var(--bg-deep); font-weight:500;}
 .qty-control{display:flex; align-items:center; gap:16px;}
 .qty-btn{width:34px; height:34px; border-radius:50%; border:1px solid var(--line); color:var(--ivory); font-size:17px; display:flex; align-items:center; justify-content:center; transition:all .22s ease; flex-shrink:0;}
@@ -359,7 +361,8 @@ html[dir="rtl"] .cart-item-remove{text-align:start;}
     </div>
     <p class="modal-sub" data-i18n="variant.subtitle">Choisissez la couleur, la taille et la quantité.</p>
     <div class="order-summary" id="variantPackInfo" style="display:none;"></div>
-    <div class="field"><label data-i18n="modal.field.color">Couleur</label><div class="select-pill-row" id="colorPills"></div></div>
+    <div class="field" id="colorField"><label data-i18n="modal.field.color">Couleur</label><div class="select-pill-row" id="colorPills"></div></div>
+    <div class="field" id="packColorField" style="display:none;"></div>
     <div class="field"><label data-i18n="modal.field.size">Taille</label><div class="select-pill-row" id="sizePills"></div></div>
     <div class="field">
       <label data-i18n="modal.field.qty">Quantité</label>
@@ -435,6 +438,12 @@ const SUPABASE_URL = "https://uqzphhqjsxcyorwbxdli.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Hnjx1oNHnBDb9wCT61QaeQ_RBaDOUu7";
 const SUPABASE_ORDERS_URL = `${SUPABASE_URL}/rest/v1/Orders`;
 const SUPABASE_PRODUCTS_URL = `${SUPABASE_URL}/rest/v1/products`;
+const SUPABASE_SETTINGS_URL = `${SUPABASE_URL}/rest/v1/site_settings`;
+const LANGUAGE_STORAGE_KEY = "lunea_language";
+let SITE_DEFAULT_LANGUAGE = "ar";
+const SUPABASE_STORAGE_BUCKET = "product-images";
+const SUPABASE_STORAGE_OBJECT_URL = `${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}`;
+const SUPABASE_STORAGE_PUBLIC_URL = `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}`;
 const SUPABASE_AUTH_URL = `${SUPABASE_URL}/auth/v1`;
 const ADMIN_SESSION_KEY = "lunea_admin_session";
 
@@ -497,6 +506,7 @@ const DEFAULT_COLORS = [
   { id:"beige", fr:"Beige", ar:"بيج",  hex:"#c9a877" },
 ];
 const DEFAULT_SIZES = ["S","M","L","XL"];
+const DEFAULT_PACK_PIECES = { packstring:3, packchemise:2 };
 const PRODUCT_VARIANTS_KEY = "lunea_product_variants";
 let PRODUCT_BACKEND_ROWS = {};
 function loadProductVariants(){ try{ return JSON.parse(localStorage.getItem(PRODUCT_VARIANTS_KEY)||'{}'); }catch(e){ return {}; } }
@@ -512,7 +522,7 @@ function buildProductVariants(){
       colors: (Array.isArray(s.colors) && s.colors.length) ? s.colors : DEFAULT_COLORS.map(c=>({...c})),
       sizes:  (Array.isArray(s.sizes)  && s.sizes.length)  ? s.sizes.slice() : DEFAULT_SIZES.slice(),
       stock:  (typeof s.stock === "number" && !isNaN(s.stock)) ? s.stock : null,
-      pack:   s.pack || null
+      pack:   s.pack || (DEFAULT_PACK_PIECES[p.id] ? { pieces:DEFAULT_PACK_PIECES[p.id], name:{fr:"",ar:""}, contents:{fr:"",ar:""} } : null)
     };
   });
   return result;
@@ -583,7 +593,8 @@ const I18N = {
     "admin.passMismatch":"Les mots de passe ne correspondent pas","admin.passTooShort":"6 caractères minimum",
     "admin.forgotPassword":"Mot de passe oublié ?","admin.resetConfirm":"Réinitialiser le mot de passe Admin sur cet appareil ?",
     "status.new":"Nouvelle commande","status.confirmed":"Confirmée","status.shipped":"Expédiée","status.delivered":"Livrée","status.cancelled":"Annulée",
-    "admin.ordersTab":"Commandes","admin.productsTab":"Produits","admin.productsTitle":"Gestion des produits",
+    "admin.ordersTab":"Commandes","admin.productsTab":"Produits","admin.settingsTab":"Réglages","admin.settingsTitle":"Réglages du site",
+     "admin.defaultLanguage":"Langue d'ouverture du site","admin.defaultLanguageHint":"Choisissez la langue affichée par défaut aux nouveaux visiteurs. Le visiteur peut ensuite changer de langue à tout moment.","admin.defaultLanguageAr":"Arabe","admin.defaultLanguageFr":"Français","admin.saveSettings":"Enregistrer les réglages","admin.settingsSaved":"Réglages enregistrés",
     "admin.field.nameFr":"Nom (Français)","admin.field.nameAr":"Nom (Arabe)","admin.field.price":"Prix (DH)",
     "admin.field.descFr":"Description (Français)","admin.field.descAr":"Description (Arabe)",
     "admin.field.badgeFr":"Badge (Français)","admin.field.badgeAr":"Badge (Arabe)",
@@ -599,7 +610,7 @@ const I18N = {
     "admin.colors.title":"Couleurs","admin.sizes.title":"Tailles",
     "admin.colorFr":"Nom (Français)","admin.colorAr":"Nom (Arabe)",
     "admin.addColor":"Ajouter une couleur","admin.addSize":"Ajouter une taille","admin.newSize":"Nouvelle taille",
-    "pack.pieces":"pièces","variant.inStock":"En stock","variant.outOfStock":"Rupture de stock",
+    "pack.pieces":"pièces","pack.colorPiece":"Couleur de la pièce","variant.inStock":"En stock","variant.outOfStock":"Rupture de stock",
   },
   ar: {
     "brand.tagline":"مجموعة فاخرة",
@@ -649,7 +660,8 @@ const I18N = {
     "admin.passMismatch":"كلمتا المرور غير متطابقتين","admin.passTooShort":"6 أحرف على الأقل",
     "admin.forgotPassword":"نسيت كلمة المرور؟","admin.resetConfirm":"إعادة تعيين كلمة مرور الإدارة على هذا الجهاز؟",
     "status.new":"طلب جديد","status.confirmed":"تم التأكيد","status.shipped":"تم الشحن","status.delivered":"تم التسليم","status.cancelled":"ملغى",
-    "admin.ordersTab":"الطلبات","admin.productsTab":"المنتجات","admin.productsTitle":"إدارة المنتجات",
+    "admin.ordersTab":"الطلبات","admin.productsTab":"المنتجات","admin.settingsTab":"الإعدادات","admin.settingsTitle":"إعدادات الموقع",
+     "admin.defaultLanguage":"لغة فتح الموقع","admin.defaultLanguageHint":"اختر اللغة التي تظهر افتراضياً للزوار الجدد. ويمكن للزائر تغيير اللغة في أي وقت.","admin.defaultLanguageAr":"العربية","admin.defaultLanguageFr":"الفرنسية","admin.saveSettings":"حفظ الإعدادات","admin.settingsSaved":"تم حفظ الإعدادات",
     "admin.field.nameFr":"الاسم (بالفرنسية)","admin.field.nameAr":"الاسم (بالعربية)","admin.field.price":"السعر (درهم)",
     "admin.field.descFr":"الوصف (بالفرنسية)","admin.field.descAr":"الوصف (بالعربية)",
     "admin.field.badgeFr":"الشارة (بالفرنسية)","admin.field.badgeAr":"الشارة (بالعربية)",
@@ -665,7 +677,7 @@ const I18N = {
     "admin.colors.title":"الألوان","admin.sizes.title":"المقاسات",
     "admin.colorFr":"الاسم (بالفرنسية)","admin.colorAr":"الاسم (بالعربية)",
     "admin.addColor":"إضافة لون","admin.addSize":"إضافة مقاس","admin.newSize":"مقاس جديد",
-    "pack.pieces":"قطع","variant.inStock":"متوفر","variant.outOfStock":"نفدت الكمية",
+    "pack.pieces":"قطع","pack.colorPiece":"لون القطعة","variant.inStock":"متوفر","variant.outOfStock":"نفدت الكمية",
   }
 };
 
@@ -729,6 +741,43 @@ async function updateOrderStatusInSupabase(orderCode,status){
     body:JSON.stringify({status}),
     token:getAdminToken()
   });
+}
+
+/* ============================================================
+   SITE SETTINGS — DEFAULT LANGUAGE
+   The public default is stored in Supabase so every new visitor
+   starts in the language chosen by the admin. A visitor who has
+   already chosen a language keeps that choice on the same device.
+   ============================================================ */
+async function loadSiteSettings(){
+  try{
+    const rows=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=default_language`,{token:SUPABASE_PUBLISHABLE_KEY});
+    if(Array.isArray(rows) && rows[0] && (rows[0].default_language==='ar' || rows[0].default_language==='fr')){
+      SITE_DEFAULT_LANGUAGE=rows[0].default_language;
+      return SITE_DEFAULT_LANGUAGE;
+    }
+  }catch(err){ console.warn("Supabase site settings unavailable; using Arabic default.",err); }
+  return SITE_DEFAULT_LANGUAGE;
+}
+async function saveSiteDefaultLanguage(lang){
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  if(lang!=="ar" && lang!=="fr") throw new Error("Invalid language");
+  await supabaseRequest(SUPABASE_SETTINGS_URL,{
+    method:"POST",
+    headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},
+    body:JSON.stringify({id:"site",default_language:lang}),
+    token:getAdminToken()
+  });
+  SITE_DEFAULT_LANGUAGE=lang;
+}
+function getSavedVisitorLanguage(){
+  try{
+    const lang=localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return (lang==='ar' || lang==='fr') ? lang : null;
+  }catch(e){ return null; }
+}
+function saveVisitorLanguage(lang){
+  try{ localStorage.setItem(LANGUAGE_STORAGE_KEY,lang); }catch(e){}
 }
 
 /* ============================================================
@@ -812,7 +861,7 @@ function applyProductOverrides(){
 applyProductOverrides();
 
 /* ============================================================
-   PRODUCT IMAGE MANAGEMENT (admin edits — client-side only).
+   PRODUCT IMAGE MANAGEMENT (admin edits — Supabase Storage).
    Each product can have several images stored as an ordered
    array; PRODUCTS_IMAGES[id] (used everywhere else in the site:
    product grid, cart item thumbnails) is kept in sync with the
@@ -822,6 +871,56 @@ applyProductOverrides();
    badges, cart, checkout, or orders.
    ============================================================ */
 const PRODUCT_GALLERY_KEY = "lunea_product_gallery";
+
+function storageObjectPath(path){
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+function storagePublicUrl(path){
+  return `${SUPABASE_STORAGE_PUBLIC_URL}/${storageObjectPath(path)}`;
+}
+function storagePathFromUrl(url){
+  const marker = `${SUPABASE_STORAGE_PUBLIC_URL}/`;
+  if(typeof url!=="string" || !url.startsWith(marker)) return null;
+  try { return decodeURIComponent(url.slice(marker.length)); } catch(e){ return url.slice(marker.length); }
+}
+async function uploadProductImageToStorage(file, productId){
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  const dataUrl = await fileToResizedDataURL(file, 1400, 0.84);
+  const blob = await (await fetch(dataUrl)).blob();
+  const path = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2,9)}.jpg`;
+  const res = await fetch(`${SUPABASE_STORAGE_OBJECT_URL}/${storageObjectPath(path)}`, {
+    method:"POST",
+    headers:{
+      "apikey":SUPABASE_PUBLISHABLE_KEY,
+      "Authorization":`Bearer ${getAdminToken()}`,
+      "Content-Type":"image/jpeg",
+      "x-upsert":"false"
+    },
+    body:blob
+  });
+  if(!res.ok){
+    let detail="";
+    try{ detail=await res.text(); }catch(e){}
+    throw new Error(`Storage upload ${res.status}: ${detail||res.statusText}`);
+  }
+  return storagePublicUrl(path);
+}
+async function deleteProductImageFromStorage(url){
+  const path = storagePathFromUrl(url);
+  if(!path || !isAdminAuthenticated()) return;
+  const res = await fetch(`${SUPABASE_STORAGE_OBJECT_URL}/${storageObjectPath(path)}`, {
+    method:"DELETE",
+    headers:{
+      "apikey":SUPABASE_PUBLISHABLE_KEY,
+      "Authorization":`Bearer ${getAdminToken()}`
+    }
+  });
+  if(!res.ok && res.status!==404){
+    let detail="";
+    try{ detail=await res.text(); }catch(e){}
+    throw new Error(`Storage delete ${res.status}: ${detail||res.statusText}`);
+  }
+}
 function loadProductGallery(){ try{ return JSON.parse(localStorage.getItem(PRODUCT_GALLERY_KEY)||'{}'); }catch(e){ return {}; } }
 function saveProductGallery(g){
   try{ localStorage.setItem(PRODUCT_GALLERY_KEY, JSON.stringify(g)); return true; }
@@ -847,8 +946,7 @@ function buildProductImageGallery(){
 PRODUCT_IMAGE_GALLERY = buildProductImageGallery();
 function syncPrimaryImage(id){ PRODUCT_IMAGES[id] = PRODUCT_IMAGE_GALLERY[id][0]; }
 
-/* Downscale/compress an uploaded image client-side (no backend/storage
-   service used) to keep it reasonably small for localStorage. */
+/* Downscale/compress before upload so product images stay fast and lightweight. */
 function fileToResizedDataURL(file, maxDim, quality){
   maxDim = maxDim || 1100; quality = quality || 0.82;
   return new Promise((resolve, reject)=>{
@@ -924,8 +1022,9 @@ function applyTranslations(){
   if(cartOverlay.classList.contains("open")) renderCart();
   if(checkoutOverlay.classList.contains("open")) updateCheckoutSummary();
 }
-function setLanguage(lang){
+function setLanguage(lang, persist=true){
   currentLang = lang;
+  if(persist) saveVisitorLanguage(lang);
   document.documentElement.lang = lang;
   document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
   document.querySelectorAll(".lang-btn").forEach(b=> b.classList.toggle("active", b.dataset.lang === lang));
@@ -972,11 +1071,30 @@ const colorPills = document.getElementById("colorPills");
 const sizePills = document.getElementById("sizePills");
 const qtyValue = document.getElementById("qtyValue");
 let currentVariantProduct = null;
-let variantState = { color:null, size:null, qty:1 };
+let variantState = { color:null, colors:[], size:null, qty:1 };
+
+function getPackPieces(productId){
+  const v = PRODUCT_VARIANTS[productId];
+  const pieces = v && v.pack && Number(v.pack.pieces);
+  return Number.isFinite(pieces) && pieces > 1 ? Math.floor(pieces) : 0;
+}
+function isPackVariant(){
+  return !!currentVariantProduct && getPackPieces(currentVariantProduct.id) > 1;
+}
+function selectedPackColors(){
+  return Array.isArray(variantState.colors) ? variantState.colors : [];
+}
+function itemColorText(item){
+  if(Array.isArray(item.colors) && item.colors.length){
+    return item.colors.map(c=>colorLabel(item.productId,c)).join(" + ");
+  }
+  return item.color ? colorLabel(item.productId,item.color) : "—";
+}
 
 function openVariantModal(productId){
   currentVariantProduct = PRODUCTS.find(p=>p.id===productId);
-  variantState = { color:null, size:null, qty:1 };
+  const pieces = getPackPieces(productId);
+  variantState = { color:null, colors:Array(pieces).fill(null), size:null, qty:1 };
   qtyValue.textContent = "1";
   renderVariantOptions();
   updateVariantSummary();
@@ -989,9 +1107,35 @@ document.getElementById("variantClose").addEventListener("click", closeVariantMo
 function renderVariantOptions(){
   const colors = getProductColors(currentVariantProduct.id);
   const sizes = getProductSizes(currentVariantProduct.id);
-  colorPills.innerHTML = colors.map(c=>`<button type="button" class="pill ${variantState.color===c.id?'selected':''}" data-color="${c.id}">${escHtml(currentLang==="ar"?c.ar:c.fr)}</button>`).join("");
+  const packPieces = getPackPieces(currentVariantProduct.id);
+  const colorField = document.getElementById("colorField");
+  const packColorField = document.getElementById("packColorField");
+  if(packPieces > 1){
+    colorField.style.display = "none";
+    packColorField.style.display = "";
+    packColorField.innerHTML = Array.from({length:packPieces},(_,idx)=>`
+      <div class="pack-color-choice">
+        <label>${t("pack.colorPiece")} ${idx+1}</label>
+        <div class="select-pill-row">${colors.map(c=>`
+          <button type="button" class="pill ${variantState.colors[idx]===c.id?'selected':''}" data-pack-color="${idx}:${c.id}">
+            ${escHtml(currentLang==="ar"?c.ar:c.fr)}
+          </button>`).join("")}</div>
+      </div>`).join("");
+    packColorField.querySelectorAll("[data-pack-color]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const [idxStr,colorId] = btn.dataset.packColor.split(":");
+        variantState.colors[Number(idxStr)] = colorId;
+        renderVariantOptions();
+        updateVariantSummary();
+      });
+    });
+  }else{
+    colorField.style.display = "";
+    packColorField.style.display = "none";
+    colorPills.innerHTML = colors.map(c=>`<button type="button" class="pill ${variantState.color===c.id?'selected':''}" data-color="${c.id}">${escHtml(currentLang==="ar"?c.ar:c.fr)}</button>`).join("");
+    colorPills.querySelectorAll(".pill").forEach(p=> p.addEventListener("click", ()=>{ variantState.color = p.dataset.color; renderVariantOptions(); updateVariantSummary(); }));
+  }
   sizePills.innerHTML = sizes.map(s=>`<button type="button" class="pill ${variantState.size===s?'selected':''}" data-size="${escAttr(s)}">${escHtml(s)}</button>`).join("");
-  colorPills.querySelectorAll(".pill").forEach(p=> p.addEventListener("click", ()=>{ variantState.color = p.dataset.color; renderVariantOptions(); updateVariantSummary(); }));
   sizePills.querySelectorAll(".pill").forEach(p=> p.addEventListener("click", ()=>{ variantState.size = p.dataset.size; renderVariantOptions(); updateVariantSummary(); }));
 }
 function getVariantMaxQty(){
@@ -1005,9 +1149,12 @@ document.getElementById("qtyPlus").addEventListener("click", ()=>{ variantState.
 function updateVariantSummary(){
   if(!currentVariantProduct) return;
   const total = currentVariantProduct.price * variantState.qty;
+  const colorText = isPackVariant()
+    ? selectedPackColors().map((c,i)=>c ? `${t("pack.colorPiece")} ${i+1}: ${colorLabel(currentVariantProduct.id,c)}` : `${t("pack.colorPiece")} ${i+1}: —`).join(" · ")
+    : (variantState.color ? colorLabel(currentVariantProduct.id, variantState.color) : "—");
   document.getElementById("variantSummary").innerHTML = `
     <div class="row"><span>${t("summary.product")}</span><span>${t(currentVariantProduct.nameKey)}</span></div>
-    <div class="row"><span>${t("summary.color")}</span><span>${variantState.color ? colorLabel(currentVariantProduct.id, variantState.color) : "—"}</span></div>
+    <div class="row"><span>${t("summary.color")}</span><span>${colorText}</span></div>
     <div class="row"><span>${t("summary.size")}</span><span>${variantState.size || "—"}</span></div>
     <div class="row"><span>${t("summary.qty")}</span><span>${variantState.qty}</span></div>
     <div class="row total"><span>${t("summary.total")}</span><span>${total} ${t("unit.dh")}</span></div>`;
@@ -1034,11 +1181,16 @@ function renderVariantPackInfo(){
 }
 
 document.getElementById("addToCartBtn").addEventListener("click", ()=>{
-  if(!variantState.color){ showToast(t("modal.error.color")); return; }
+  const pack = isPackVariant();
+  const colors = pack ? selectedPackColors() : [];
+  if(pack ? (colors.length!==getPackPieces(currentVariantProduct.id) || colors.some(c=>!c)) : !variantState.color){
+    showToast(t("modal.error.color")); return;
+  }
   if(!variantState.size){ showToast(t("modal.error.size")); return; }
   const v = PRODUCT_VARIANTS[currentVariantProduct.id];
   if(v && typeof v.stock === "number" && v.stock <= 0){ showToast(t("variant.outOfStock")); return; }
-  const existing = cart.find(i=> i.productId===currentVariantProduct.id && i.color===variantState.color && i.size===variantState.size);
+  const colorKey = pack ? JSON.stringify(colors) : (variantState.color||"");
+  const existing = cart.find(i=> i.productId===currentVariantProduct.id && (Array.isArray(i.colors) ? JSON.stringify(i.colors) : (i.color||""))===colorKey && i.size===variantState.size);
   if(existing){ existing.qty += variantState.qty; }
   else{
     cart.push({
@@ -1046,7 +1198,8 @@ document.getElementById("addToCartBtn").addEventListener("click", ()=>{
       productId: currentVariantProduct.id,
       nameKey: currentVariantProduct.nameKey,
       price: currentVariantProduct.price,
-      color: variantState.color,
+      color: pack ? colors[0] : variantState.color,
+      colors: pack ? colors.slice() : null,
       size: variantState.size,
       qty: variantState.qty
     });
@@ -1088,7 +1241,7 @@ function renderCart(){
     return;
   }
   const items = cart.map(item=>{
-    const colorTxt = colorLabel(item.productId, item.color);
+    const colorTxt = itemColorText(item);
     return `
     <div class="cart-item" data-line="${item.lineId}">
       <div class="cart-item-photo"><img src="${PRODUCT_IMAGES[item.productId]}" alt=""></div>
@@ -1168,7 +1321,7 @@ function showCheckoutStep(step){
 }
 function cartSummaryHTML(withTotalOnly){
   const rows = cart.map(item=>{
-    const colorTxt = colorLabel(item.productId, item.color);
+    const colorTxt = itemColorText(item);
     return `<div class="row"><span>${t(item.nameKey)} — ${colorTxt} / ${item.size} ×${item.qty}</span><span>${item.price*item.qty} ${t("unit.dh")}</span></div>`;
   }).join("");
   return `${rows}<div class="row total"><span>${t("summary.total")}</span><span>${cartTotal()} ${t("unit.dh")}</span></div>`;
@@ -1234,7 +1387,7 @@ document.getElementById("submitOrder").addEventListener("click", async ()=>{
       address: document.getElementById("fAddress").value.trim(),
       remark: document.getElementById("fRemark").value.trim(),
     },
-    items: cart.map(i=>({ name: t(i.nameKey), color: colorLabel(i.productId, i.color), size:i.size, qty:i.qty, price:i.price })),
+    items: cart.map(i=>({ name: t(i.nameKey), color: itemColorText(i), size:i.size, qty:i.qty, price:i.price })),
     total: cartTotal(),
     payment: "cod"
   };
@@ -1289,7 +1442,9 @@ function refreshOpenAdminView(){
   if(!adminOverlay.classList.contains("open")) return;
   if(isAdminAuthenticated()){
     const active = document.querySelector('[data-admintab].btn-primary')?.dataset.admintab || "orders";
-    active === "products" ? renderAdminProducts() : renderAdminOrders();
+    if(active === "products") renderAdminProducts();
+    else if(active === "settings") renderAdminSettings();
+    else renderAdminOrders();
   } else renderAdminLogin();
 }
 function renderAdminLogin(){
@@ -1322,14 +1477,19 @@ function renderAdminLogin(){
 }
 function signOutAdmin(){ clearAdminSession(); renderAdminLogin(); }
 function adminTabsHTML(active){
-  return `<div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+  return `<div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
       <button type="button" class="btn ${active==='orders'?'btn-primary':'btn-ghost'}" data-admintab="orders">${t("admin.ordersTab")}</button>
       <button type="button" class="btn ${active==='products'?'btn-primary':'btn-ghost'}" data-admintab="products">${t("admin.productsTab")}</button>
+      <button type="button" class="btn ${active==='settings'?'btn-primary':'btn-ghost'}" data-admintab="settings">${t("admin.settingsTab")}</button>
     </div>`;
 }
 function bindAdminTabs(){
   document.querySelectorAll("[data-admintab]").forEach(b=>{
-    b.addEventListener("click", ()=>{ b.dataset.admintab==="orders" ? renderAdminOrders() : renderAdminProducts(); });
+    b.addEventListener("click", ()=>{
+      if(b.dataset.admintab==="orders") renderAdminOrders();
+      else if(b.dataset.admintab==="products") renderAdminProducts();
+      else renderAdminSettings();
+    });
   });
 }
 async function renderAdminOrders(){
@@ -1392,6 +1552,42 @@ async function renderAdminOrders(){
   });
   const logoutBtn = document.getElementById("adminLogoutBtn");
   if(logoutBtn) logoutBtn.addEventListener("click", signOutAdmin);
+}
+
+/* ---- Site settings view ---- */
+async function renderAdminSettings(){
+  if(!isAdminAuthenticated()){ renderAdminLogin(); return; }
+  let current=SITE_DEFAULT_LANGUAGE;
+  try{ current=await loadSiteSettings(); }catch(e){}
+  let html=adminLanguageSwitcherHTML();
+  html+=adminTabsHTML("settings");
+  html+=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap:16px; flex-wrap:wrap;">
+      <h2 style="font-family:var(--font-display); font-size:28px;">${t("admin.settingsTitle")}</h2>
+      <button class="btn btn-ghost" id="adminLogoutBtn">${t("admin.logout")}</button>
+    </div>
+    <div class="field" style="max-width:560px;">
+      <label>${t("admin.defaultLanguage")}</label>
+      <select id="siteDefaultLanguage" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
+        <option value="ar" ${current==='ar'?'selected':''}>🇲🇦 ${t("admin.defaultLanguageAr")}</option>
+        <option value="fr" ${current==='fr'?'selected':''}>🇫🇷 ${t("admin.defaultLanguageFr")}</option>
+      </select>
+      <p style="color:var(--ivory-dim); font-size:12px; line-height:1.7; margin-top:8px;">${t("admin.defaultLanguageHint")}</p>
+      <button class="btn btn-primary" id="saveSiteSettingsBtn">${t("admin.saveSettings")}</button>
+    </div>`;
+  document.getElementById("adminWrap").innerHTML=html;
+  bindAdminTabs();
+  const logoutBtn=document.getElementById("adminLogoutBtn");
+  if(logoutBtn) logoutBtn.addEventListener("click",signOutAdmin);
+  document.getElementById("saveSiteSettingsBtn").addEventListener("click",async()=>{
+    const btn=document.getElementById("saveSiteSettingsBtn");
+    const lang=document.getElementById("siteDefaultLanguage").value;
+    btn.disabled=true;
+    try{
+      await saveSiteDefaultLanguage(lang);
+      showToast(t("admin.settingsSaved"));
+    }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
+    finally{ btn.disabled=false; }
+  });
 }
 
 /* ---- Product management view ---- */
@@ -1617,18 +1813,16 @@ function bindProductVariantEvents(){
   });
 }
 
-function persistGalleryOrShowError(){
+async function persistGalleryOrShowError(id){
   const ok = saveProductGallery(PRODUCT_IMAGE_GALLERY);
-  if(!ok) showToast(t("admin.imgSaveError"));
-  if(ok && isAdminAuthenticated()){
-    Object.keys(PRODUCT_IMAGE_GALLERY).forEach(id=>saveProductToSupabase(id).catch(e=>console.error(e)));
-  }
-  return ok;
+  if(!ok){ showToast(t("admin.imgSaveError")); return false; }
+  if(id && isAdminAuthenticated()) await saveProductToSupabase(id);
+  return true;
 }
 
-function bindProductImageEvents(){
+async function bindProductImageEvents(){
   document.querySelectorAll("[data-imgmove]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const [id, idxStr, dir] = btn.dataset.imgmove.split(":");
       const idx = parseInt(idxStr, 10);
@@ -1637,14 +1831,16 @@ function bindProductImageEvents(){
       if(!gallery || swapWith<0 || swapWith>=gallery.length) return;
       [gallery[idx], gallery[swapWith]] = [gallery[swapWith], gallery[idx]];
       syncPrimaryImage(id);
-      persistGalleryOrShowError();
+      try{ await persistGalleryOrShowError(id); }
+      catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
       renderProducts();
       openProductId = id;
       renderAdminProducts();
     });
   });
+
   document.querySelectorAll("[data-imgprimary]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const [id, idxStr] = btn.dataset.imgprimary.split(":");
       const idx = parseInt(idxStr, 10);
@@ -1653,29 +1849,40 @@ function bindProductImageEvents(){
       const [chosen] = gallery.splice(idx, 1);
       gallery.unshift(chosen);
       syncPrimaryImage(id);
-      persistGalleryOrShowError();
+      try{ await persistGalleryOrShowError(id); showToast(t("admin.productSaved")); }
+      catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
       renderProducts();
-      showToast(t("admin.productSaved"));
       openProductId = id;
       renderAdminProducts();
     });
   });
+
   document.querySelectorAll("[data-imgdelete]").forEach(btn=>{
-    btn.addEventListener("click", (e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const [id, idxStr] = btn.dataset.imgdelete.split(":");
       const idx = parseInt(idxStr, 10);
       const gallery = PRODUCT_IMAGE_GALLERY[id];
       if(!gallery || gallery.length<=1){ showToast(t("admin.imgDeleteLastError")); return; }
+      const oldUrl = gallery[idx];
       gallery.splice(idx, 1);
       syncPrimaryImage(id);
-      persistGalleryOrShowError();
+      try{
+        await deleteProductImageFromStorage(oldUrl);
+        await persistGalleryOrShowError(id);
+        showToast(t("admin.productSaved"));
+      }catch(err){
+        console.error(err);
+        gallery.splice(idx, 0, oldUrl);
+        syncPrimaryImage(id);
+        showToast(t("admin.backendWriteError"));
+      }
       renderProducts();
-      showToast(t("admin.productSaved"));
       openProductId = id;
       renderAdminProducts();
     });
   });
+
   document.querySelectorAll("[data-imgreplace]").forEach(input=>{
     input.addEventListener("click", (e)=> e.stopPropagation());
     input.addEventListener("change", async (e)=>{
@@ -1685,19 +1892,25 @@ function bindProductImageEvents(){
       const [id, idxStr] = input.dataset.imgreplace.split(":");
       const idx = parseInt(idxStr, 10);
       try{
-        const dataUrl = await fileToResizedDataURL(file);
         const gallery = PRODUCT_IMAGE_GALLERY[id];
         if(!gallery) return;
-        gallery[idx] = dataUrl;
+        const oldUrl = gallery[idx];
+        const publicUrl = await uploadProductImageToStorage(file,id);
+        gallery[idx] = publicUrl;
         syncPrimaryImage(id);
-        persistGalleryOrShowError();
+        await persistGalleryOrShowError(id);
+        if(oldUrl && oldUrl!==publicUrl) await deleteProductImageFromStorage(oldUrl);
         renderProducts();
         showToast(t("admin.productSaved"));
         openProductId = id;
         renderAdminProducts();
-      }catch(err){ showToast(t("admin.imgSaveError")); }
+      }catch(err){
+        console.error(err);
+        showToast(t("admin.backendWriteError"));
+      }finally{ input.value=""; }
     });
   });
+
   document.querySelectorAll("[data-imgadd]").forEach(input=>{
     input.addEventListener("click", (e)=> e.stopPropagation());
     input.addEventListener("change", async (e)=>{
@@ -1706,16 +1919,19 @@ function bindProductImageEvents(){
       if(!file) return;
       const id = input.dataset.imgadd;
       try{
-        const dataUrl = await fileToResizedDataURL(file);
+        const publicUrl = await uploadProductImageToStorage(file,id);
         if(!PRODUCT_IMAGE_GALLERY[id]) PRODUCT_IMAGE_GALLERY[id] = [];
-        PRODUCT_IMAGE_GALLERY[id].push(dataUrl);
+        PRODUCT_IMAGE_GALLERY[id].push(publicUrl);
         syncPrimaryImage(id);
-        persistGalleryOrShowError();
+        await persistGalleryOrShowError(id);
         renderProducts();
         showToast(t("admin.productSaved"));
         openProductId = id;
         renderAdminProducts();
-      }catch(err){ showToast(t("admin.imgSaveError")); }
+      }catch(err){
+        console.error(err);
+        showToast(t("admin.backendWriteError"));
+      }finally{ input.value=""; }
     });
   });
 }
@@ -1778,11 +1994,13 @@ function saveProductEdits(id){
    INIT
    ============================================================ */
 (async function initLunea(){
+  await loadSiteSettings();
   await loadProductsFromSupabase();
   applyProductOverrides();
   PRODUCT_VARIANTS = buildProductVariants();
   PRODUCT_IMAGE_GALLERY = buildProductImageGallery();
-  setLanguage("ar");
+  const visitorLanguage=getSavedVisitorLanguage() || SITE_DEFAULT_LANGUAGE || "ar";
+  setLanguage(visitorLanguage, false);
   updateCartBadge();
 })();
 </script>
