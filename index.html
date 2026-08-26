@@ -530,6 +530,7 @@ function buildProductVariants(){
 }
 PRODUCT_VARIANTS = buildProductVariants();
 async function persistVariantsOrShowError(id){
+  if(!id || !PRODUCT_VARIANTS[id]) throw new Error("Produit introuvable");
   if(!saveProductVariants(PRODUCT_VARIANTS)) throw new Error(t("admin.imgSaveError"));
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   await saveProductToSupabase(id);
@@ -933,7 +934,8 @@ async function uploadProductImageToStorage(file, productId){
 }
 async function deleteProductImageFromStorage(url){
   const path = storagePathFromUrl(url);
-  if(!path || !isAdminAuthenticated()) return;
+  if(!path) return;
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   const res = await fetch(`${SUPABASE_STORAGE_OBJECT_URL}/${storageObjectPath(path)}`, {
     method:"DELETE",
     headers:{
@@ -1903,7 +1905,7 @@ function renderAdminProducts(){
     });
   });
   document.querySelectorAll("[data-save]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{ e.stopPropagation(); await saveProductEdits(btn.dataset.save); });
+    btn.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation(); await saveProductEdits(btn.dataset.save); });
   });
   bindProductImageEvents();
   bindProductVariantEvents();
@@ -1973,7 +1975,7 @@ async function bindProductVariantEvents(){
       if(field==="hex"){ c.hex = val || c.hex; }
       else if(val){ c[field] = val; }
       else{ inp.value = old; return; }
-      try{ await persistVariantsOrShowError(id); renderProducts(); }
+      try{ await persistVariantsOrShowError(pid); renderProducts(); }
       catch(err){ c[field]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showBackendError(err, t("admin.backendWriteError")); }
     });
   });
@@ -2031,7 +2033,7 @@ async function bindProductVariantEvents(){
       const idx = arr.indexOf(old);
       if(idx<0) return;
       arr[idx] = val;
-      try{ await persistVariantsOrShowError(id); renderProducts(); openProductId=pid; renderAdminProducts(); }
+      try{ await persistVariantsOrShowError(pid); renderProducts(); openProductId=pid; renderAdminProducts(); }
       catch(err){ arr[idx]=old; saveProductVariants(PRODUCT_VARIANTS); inp.value=old; console.error(err); showBackendError(err, t("admin.backendWriteError")); }
     });
   });
