@@ -441,6 +441,7 @@ const SUPABASE_PRODUCTS_URL = `${SUPABASE_URL}/rest/v1/products`;
 const SUPABASE_SETTINGS_URL = `${SUPABASE_URL}/rest/v1/site_settings`;
 const LANGUAGE_STORAGE_KEY = "lunea_language";
 let SITE_DEFAULT_LANGUAGE = "ar";
+let SITE_CONTENT = { fr:{}, ar:{} };
 const SUPABASE_STORAGE_BUCKET = "product-images";
 const SUPABASE_STORAGE_OBJECT_URL = `${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}`;
 const SUPABASE_STORAGE_PUBLIC_URL = `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}`;
@@ -595,6 +596,7 @@ const I18N = {
     "status.new":"Nouvelle commande","status.confirmed":"Confirmée","status.shipped":"Expédiée","status.delivered":"Livrée","status.cancelled":"Annulée",
     "admin.ordersTab":"Commandes","admin.productsTab":"Produits","admin.settingsTab":"Réglages","admin.settingsTitle":"Réglages du site",
      "admin.defaultLanguage":"Langue d'ouverture du site","admin.defaultLanguageHint":"Choisissez la langue affichée par défaut aux nouveaux visiteurs. Le visiteur peut ensuite changer de langue à tout moment.","admin.defaultLanguageAr":"Arabe","admin.defaultLanguageFr":"Français","admin.saveSettings":"Enregistrer les réglages","admin.settingsSaved":"Réglages enregistrés",
+    "admin.frontTexts":"Textes de la page d’accueil","admin.frontHeroEyebrow":"Petit texte au-dessus du titre","admin.frontHeroPitch":"Texte principal","admin.frontHeroCta":"Bouton principal","admin.frontCollectionTitle":"Titre de la collection","admin.frontCollectionSubtitle":"Sous-titre de la collection","admin.frontWhyTitle":"Titre de la section Pourquoi LUNÉA","admin.frontFeatureQuote":"Citation mise en avant","admin.frontFooterDelivery":"Texte livraison","admin.frontFooterCod":"Texte paiement à la livraison","admin.frontSave":"Enregistrer les textes",
     "admin.field.nameFr":"Nom (Français)","admin.field.nameAr":"Nom (Arabe)","admin.field.price":"Prix (DH)",
     "admin.field.descFr":"Description (Français)","admin.field.descAr":"Description (Arabe)",
     "admin.field.badgeFr":"Badge (Français)","admin.field.badgeAr":"Badge (Arabe)",
@@ -662,6 +664,7 @@ const I18N = {
     "status.new":"طلب جديد","status.confirmed":"تم التأكيد","status.shipped":"تم الشحن","status.delivered":"تم التسليم","status.cancelled":"ملغى",
     "admin.ordersTab":"الطلبات","admin.productsTab":"المنتجات","admin.settingsTab":"الإعدادات","admin.settingsTitle":"إعدادات الموقع",
      "admin.defaultLanguage":"لغة فتح الموقع","admin.defaultLanguageHint":"اختر اللغة التي تظهر افتراضياً للزوار الجدد. ويمكن للزائر تغيير اللغة في أي وقت.","admin.defaultLanguageAr":"العربية","admin.defaultLanguageFr":"الفرنسية","admin.saveSettings":"حفظ الإعدادات","admin.settingsSaved":"تم حفظ الإعدادات",
+    "admin.frontTexts":"نصوص الواجهة الرئيسية","admin.frontHeroEyebrow":"النص الصغير فوق العنوان","admin.frontHeroPitch":"النص الرئيسي","admin.frontHeroCta":"الزر الرئيسي","admin.frontCollectionTitle":"عنوان التشكيلة","admin.frontCollectionSubtitle":"وصف التشكيلة","admin.frontWhyTitle":"عنوان قسم لماذا LUNÉA","admin.frontFeatureQuote":"الاقتباس البارز","admin.frontFooterDelivery":"نص التوصيل","admin.frontFooterCod":"نص الدفع عند الاستلام","admin.frontSave":"حفظ النصوص",
     "admin.field.nameFr":"الاسم (بالفرنسية)","admin.field.nameAr":"الاسم (بالعربية)","admin.field.price":"السعر (درهم)",
     "admin.field.descFr":"الوصف (بالفرنسية)","admin.field.descAr":"الوصف (بالعربية)",
     "admin.field.badgeFr":"الشارة (بالفرنسية)","admin.field.badgeAr":"الشارة (بالعربية)",
@@ -751,13 +754,35 @@ async function updateOrderStatusInSupabase(orderCode,status){
    ============================================================ */
 async function loadSiteSettings(){
   try{
-    const rows=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=default_language`,{token:SUPABASE_PUBLISHABLE_KEY});
-    if(Array.isArray(rows) && rows[0] && (rows[0].default_language==='ar' || rows[0].default_language==='fr')){
-      SITE_DEFAULT_LANGUAGE=rows[0].default_language;
+    const rows=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=default_language,content_fr,content_ar`,{token:SUPABASE_PUBLISHABLE_KEY});
+    if(Array.isArray(rows) && rows[0]){
+      const r=rows[0];
+      if(r.default_language==='ar' || r.default_language==='fr') SITE_DEFAULT_LANGUAGE=r.default_language;
+      if(r.content_fr && typeof r.content_fr==='object') SITE_CONTENT.fr={...r.content_fr};
+      if(r.content_ar && typeof r.content_ar==='object') SITE_CONTENT.ar={...r.content_ar};
+      applySiteContent();
       return SITE_DEFAULT_LANGUAGE;
     }
-  }catch(err){ console.warn("Supabase site settings unavailable; using Arabic default.",err); }
+  }catch(err){ console.warn("Supabase site settings unavailable; using local defaults.",err); }
+  applySiteContent();
   return SITE_DEFAULT_LANGUAGE;
+}
+function applySiteContent(){
+  ['fr','ar'].forEach(lang=>{
+    const content=SITE_CONTENT[lang]||{};
+    Object.keys(content).forEach(key=>{ if(content[key]!==null && content[key]!==undefined && String(content[key]).trim()!=='') I18N[lang][key]=String(content[key]); });
+  });
+}
+async function saveSiteContent(content){
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  await supabaseRequest(SUPABASE_SETTINGS_URL,{
+    method:"POST",
+    headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},
+    body:JSON.stringify({id:"site",content_fr:content.fr,content_ar:content.ar}),
+    token:getAdminToken()
+  });
+  SITE_CONTENT={fr:{...content.fr},ar:{...content.ar}};
+  applySiteContent();
 }
 async function saveSiteDefaultLanguage(lang){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
@@ -770,6 +795,7 @@ async function saveSiteDefaultLanguage(lang){
   });
   SITE_DEFAULT_LANGUAGE=lang;
 }
+
 function getSavedVisitorLanguage(){
   try{
     const lang=localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -829,10 +855,12 @@ async function ensureProductsInSupabase(){
   }catch(err){ console.warn("Products seed skipped/failed",err); }
 }
 async function saveProductToSupabase(id){
-  if(!isAdminAuthenticated()) return;
-  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) throw new Error("Product not found");
   const row={name_fr:I18N.fr[p.nameKey],name_ar:I18N.ar[p.nameKey],desc_fr:I18N.fr[p.descKey],desc_ar:I18N.ar[p.descKey],badge_fr:I18N.fr[p.badgeKey],badge_ar:I18N.ar[p.badgeKey],price:p.price,enabled:p.enabled!==false,variants:PRODUCT_VARIANTS[id]||null,images:PRODUCT_IMAGE_GALLERY[id]||null};
-  await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?id=eq.${encodeURIComponent(id)}`,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(row),token:getAdminToken()});
+  const result=await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?id=eq.${encodeURIComponent(id)}&select=id`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(row),token:getAdminToken()});
+  if(!Array.isArray(result) || !result.length) throw new Error("Product update returned no row");
+  return result[0];
 }
 
 function loadProductOverrides(){ try{ return JSON.parse(localStorage.getItem(PRODUCT_OVERRIDES_KEY)||'{}'); }catch(e){ return {}; } }
@@ -1559,13 +1587,19 @@ async function renderAdminSettings(){
   if(!isAdminAuthenticated()){ renderAdminLogin(); return; }
   let current=SITE_DEFAULT_LANGUAGE;
   try{ current=await loadSiteSettings(); }catch(e){}
+  const keys=[
+    ["hero.eyebrow","admin.frontHeroEyebrow"],["hero.pitch","admin.frontHeroPitch"],["hero.cta","admin.frontHeroCta"],
+    ["collection.title","admin.frontCollectionTitle"],["collection.subtitle","admin.frontCollectionSubtitle"],
+    ["why.title","admin.frontWhyTitle"],["feature.quote","admin.frontFeatureQuote"],
+    ["footer.delivery","admin.frontFooterDelivery"],["footer.cod","admin.frontFooterCod"]
+  ];
   let html=adminLanguageSwitcherHTML();
   html+=adminTabsHTML("settings");
   html+=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap:16px; flex-wrap:wrap;">
       <h2 style="font-family:var(--font-display); font-size:28px;">${t("admin.settingsTitle")}</h2>
       <button class="btn btn-ghost" id="adminLogoutBtn">${t("admin.logout")}</button>
     </div>
-    <div class="field" style="max-width:560px;">
+    <div class="field" style="max-width:700px;">
       <label>${t("admin.defaultLanguage")}</label>
       <select id="siteDefaultLanguage" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
         <option value="ar" ${current==='ar'?'selected':''}>🇲🇦 ${t("admin.defaultLanguageAr")}</option>
@@ -1573,19 +1607,31 @@ async function renderAdminSettings(){
       </select>
       <p style="color:var(--ivory-dim); font-size:12px; line-height:1.7; margin-top:8px;">${t("admin.defaultLanguageHint")}</p>
       <button class="btn btn-primary" id="saveSiteSettingsBtn">${t("admin.saveSettings")}</button>
-    </div>`;
+    </div>
+    <div style="height:1px; background:var(--line); margin:30px 0;"></div>
+    <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:16px;">${t("admin.frontTexts")}</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; max-width:900px;">
+      ${keys.map(([key,labelKey])=>`<div class="field"><label>${t(labelKey)} — Français</label><textarea id="front-fr-${key.replace(/[^a-z0-9]+/gi,'-')}" rows="3" style="width:100%;">${escHtml(I18N.fr[key]||'')}</textarea></div>`).join('')}
+      ${keys.map(([key,labelKey])=>`<div class="field"><label>${t(labelKey)} — العربية</label><textarea id="front-ar-${key.replace(/[^a-z0-9]+/gi,'-')}" rows="3" style="width:100%;" dir="rtl">${escHtml(I18N.ar[key]||'')}</textarea></div>`).join('')}
+    </div>
+    <button class="btn btn-primary" id="saveFrontTextsBtn" style="margin-top:18px;">${t("admin.frontSave")}</button>`;
   document.getElementById("adminWrap").innerHTML=html;
   bindAdminTabs();
   const logoutBtn=document.getElementById("adminLogoutBtn");
   if(logoutBtn) logoutBtn.addEventListener("click",signOutAdmin);
   document.getElementById("saveSiteSettingsBtn").addEventListener("click",async()=>{
-    const btn=document.getElementById("saveSiteSettingsBtn");
-    const lang=document.getElementById("siteDefaultLanguage").value;
+    const btn=document.getElementById("saveSiteSettingsBtn"); const lang=document.getElementById("siteDefaultLanguage").value;
     btn.disabled=true;
-    try{
-      await saveSiteDefaultLanguage(lang);
-      showToast(t("admin.settingsSaved"));
-    }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
+    try{ await saveSiteDefaultLanguage(lang); showToast(t("admin.settingsSaved")); }
+    catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
+    finally{ btn.disabled=false; }
+  });
+  document.getElementById("saveFrontTextsBtn").addEventListener("click",async()=>{
+    const btn=document.getElementById("saveFrontTextsBtn"); btn.disabled=true;
+    const content={fr:{},ar:{}};
+    keys.forEach(([key])=>{ const safe=key.replace(/[^a-z0-9]+/gi,'-'); content.fr[key]=document.getElementById(`front-fr-${safe}`).value.trim(); content.ar[key]=document.getElementById(`front-ar-${safe}`).value.trim(); });
+    try{ await saveSiteContent(content); applyTranslations(); showToast(t("admin.settingsSaved")); }
+    catch(err){ console.error(err); showToast(t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
   });
 }
@@ -1868,13 +1914,14 @@ async function bindProductImageEvents(){
       gallery.splice(idx, 1);
       syncPrimaryImage(id);
       try{
-        await deleteProductImageFromStorage(oldUrl);
         await persistGalleryOrShowError(id);
+        await deleteProductImageFromStorage(oldUrl);
         showToast(t("admin.productSaved"));
       }catch(err){
         console.error(err);
         gallery.splice(idx, 0, oldUrl);
         syncPrimaryImage(id);
+        saveProductGallery(PRODUCT_IMAGE_GALLERY);
         showToast(t("admin.backendWriteError"));
       }
       renderProducts();
@@ -1898,7 +1945,13 @@ async function bindProductImageEvents(){
         const publicUrl = await uploadProductImageToStorage(file,id);
         gallery[idx] = publicUrl;
         syncPrimaryImage(id);
-        await persistGalleryOrShowError(id);
+        try{
+          await persistGalleryOrShowError(id);
+        }catch(saveErr){
+          gallery[idx]=oldUrl; syncPrimaryImage(id);
+          await deleteProductImageFromStorage(publicUrl);
+          throw saveErr;
+        }
         if(oldUrl && oldUrl!==publicUrl) await deleteProductImageFromStorage(oldUrl);
         renderProducts();
         showToast(t("admin.productSaved"));
@@ -1923,7 +1976,13 @@ async function bindProductImageEvents(){
         if(!PRODUCT_IMAGE_GALLERY[id]) PRODUCT_IMAGE_GALLERY[id] = [];
         PRODUCT_IMAGE_GALLERY[id].push(publicUrl);
         syncPrimaryImage(id);
-        await persistGalleryOrShowError(id);
+        try{
+          await persistGalleryOrShowError(id);
+        }catch(saveErr){
+          PRODUCT_IMAGE_GALLERY[id].pop(); syncPrimaryImage(id);
+          await deleteProductImageFromStorage(publicUrl);
+          throw saveErr;
+        }
         renderProducts();
         showToast(t("admin.productSaved"));
         openProductId = id;
