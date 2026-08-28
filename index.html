@@ -804,12 +804,47 @@ function applySiteContent(){
 }
 async function saveSiteContent(content){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
-  const payload={content_fr:{...(content.fr||{})},content_ar:{...(content.ar||{})}};
-  const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
-  if(!Array.isArray(result) || !result.length) throw new Error("لم يتم حفظ النصوص. تأكد من صلاحية UPDATE على جدول site_settings.");
-  SITE_CONTENT={fr:{...payload.content_fr},ar:{...payload.content_ar}};
-  if(SITE_CONTENT.fr.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.fr.__background_url;
-  else if(SITE_CONTENT.ar.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.ar.__background_url;
+
+  // Use the exact same proven REST update pattern as product saving:
+  // PATCH the existing singleton row (id=site), with the full JSON objects.
+  const payload={
+    content_fr:JSON.parse(JSON.stringify(content.fr||{})),
+    content_ar:JSON.parse(JSON.stringify(content.ar||{}))
+  };
+
+  const result=await supabaseRequest(
+    `${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,
+    {
+      method:"PATCH",
+      headers:{"Prefer":"return=representation"},
+      body:JSON.stringify(payload),
+      token:getAdminToken()
+    }
+  );
+
+  if(!Array.isArray(result) || result.length!==1){
+    throw new Error("Site content update returned no row");
+  }
+
+  // Read the row back immediately so a false-success can never be shown.
+  const saved=await supabaseRequest(
+    `${SUPABASE_SETTINGS_URL}?id=eq.site&select=id,content_fr,content_ar`,
+    {cache:"no-store",headers:{"Cache-Control":"no-cache","Pragma":"no-cache"},token:getAdminToken()}
+  );
+
+  if(!Array.isArray(saved) || saved.length!==1){
+    throw new Error("Site content verification failed");
+  }
+
+  const savedRow=saved[0];
+  const savedAr=savedRow.content_ar || {};
+  const savedFr=savedRow.content_fr || {};
+  if(JSON.stringify(savedAr)!==JSON.stringify(payload.content_ar) || JSON.stringify(savedFr)!==JSON.stringify(payload.content_fr)){
+    throw new Error("Supabase did not return the values that were just saved");
+  }
+
+  SITE_CONTENT={fr:{...savedFr},ar:{...savedAr}};
+  SITE_BACKGROUND_URL = (SITE_CONTENT.fr && SITE_CONTENT.fr.__background_url) || (SITE_CONTENT.ar && SITE_CONTENT.ar.__background_url) || "";
   applySiteContent();
   applySiteBackground();
 }
