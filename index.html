@@ -804,42 +804,12 @@ function applySiteContent(){
 }
 async function saveSiteContent(content){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
-
-  /* IMPORTANT: site_settings is an existing singleton row (id = site).
-     Never POST here. A POST fallback can create/merge an incomplete row and
-     make the admin UI look like it saved while the public site keeps old data.
-     We only PATCH the existing row and require Supabase to return that row. */
-  const payload={
-    content_fr:{...(content.fr||{})},
-    content_ar:{...(content.ar||{})}
-  };
-
-  const result=await supabaseRequest(
-    `${SUPABASE_SETTINGS_URL}?id=eq.site&select=id,content_fr,content_ar`,
-    {
-      method:"PATCH",
-      headers:{
-        "Prefer":"return=representation",
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify(payload),
-      token:getAdminToken()
-    }
-  );
-
-  if(!Array.isArray(result) || result.length!==1){
-    throw new Error("لم يتم حفظ النصوص. تأكد من صلاحية UPDATE على جدول site_settings.");
-  }
-
-  const saved=result[0];
-  SITE_CONTENT={
-    fr:(saved.content_fr && typeof saved.content_fr==='object')?{...saved.content_fr}:{...payload.content_fr},
-    ar:(saved.content_ar && typeof saved.content_ar==='object')?{...saved.content_ar}:{...payload.content_ar}
-  };
-
+  const payload={content_fr:{...(content.fr||{})},content_ar:{...(content.ar||{})}};
+  const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
+  if(!Array.isArray(result) || !result.length) throw new Error("لم يتم حفظ النصوص. تأكد من صلاحية UPDATE على جدول site_settings.");
+  SITE_CONTENT={fr:{...payload.content_fr},ar:{...payload.content_ar}};
   if(SITE_CONTENT.fr.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.fr.__background_url;
   else if(SITE_CONTENT.ar.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.ar.__background_url;
-
   applySiteContent();
   applySiteBackground();
 }
