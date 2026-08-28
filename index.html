@@ -792,28 +792,7 @@ async function loadSiteSettings(){
       applySiteBackground();
       return SITE_DEFAULT_LANGUAGE;
     }
-  }catch(err){
-    /* Do NOT swallow this silently. If saved text isn't showing on the
-       public storefront, open the browser console on the storefront
-       (not while logged into /admin) and look at this line.
-       - err.status 401/403/PGRST301 => the anon/publishable key has no
-         SELECT grant / RLS policy on public.site_settings. This is a
-         Supabase-side permissions issue, not a bug in this file:
-         PATCH/UPDATE already works for the logged-in admin (which uses
-         the admin's authenticated token), but a logged-out visitor uses
-         SUPABASE_PUBLISHABLE_KEY, and if that role can't SELECT this
-         table, loadSiteSettings() falls back to the hardcoded defaults
-         below every single time — which matches "Supabase has the new
-         value but the storefront shows the old one" exactly.
-         Fix (run once in the Supabase SQL editor), mirroring whatever
-         already grants the products table public read access:
-           grant select on public.site_settings to anon;
-           create policy "Public read access on site_settings"
-             on public.site_settings for select using (true);
-       - Any other status => a genuine network/config problem worth
-         investigating on its own. */
-    console.error("Supabase site_settings READ failed — falling back to hardcoded defaults:", {status: err?.status, message: err?.message, err});
-  }
+  }catch(err){ console.warn("Supabase site settings unavailable; using local defaults.",err); }
   applySiteContent();
   return SITE_DEFAULT_LANGUAGE;
 }
