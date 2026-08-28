@@ -797,20 +797,27 @@ function applySiteContent(){
 }
 async function saveSiteContent(content){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
-  const payload={id:"site",content_fr:content.fr,content_ar:content.ar};
-  let result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id,content_fr,content_ar`,{
-    method:"PATCH", headers:{"Prefer":"return=representation"}, body:JSON.stringify(payload), token:getAdminToken()
+
+  /* Save the existing settings row directly. The admin settings row is
+     created when the site is initialized, so PATCH is the safest path:
+     it cannot accidentally create a second row or silently ignore an
+     existing row because of upsert conflict handling. */
+  const payload={id:"site",content_fr:{...(content.fr||{})},content_ar:{...(content.ar||{})}};
+  const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id,content_fr,content_ar`,{
+    method:"PATCH",
+    headers:{"Prefer":"return=representation"},
+    body:JSON.stringify(payload),
+    token:getAdminToken()
   });
+
   if(!Array.isArray(result) || !result.length){
-    result=await supabaseRequest(SUPABASE_SETTINGS_URL,{
-      method:"POST", headers:{"Prefer":"return=representation"}, body:JSON.stringify(payload), token:getAdminToken()
-    });
+    throw new Error("لم يتم حفظ النصوص: صف site_settings غير موجود أو لا توجد صلاحية UPDATE.");
   }
-  if(!Array.isArray(result) || !result.length) throw new Error("Site content save returned no row");
+
   const saved=result[0];
   SITE_CONTENT={
-    fr:(saved.content_fr && typeof saved.content_fr==='object')?{...saved.content_fr}:{...content.fr},
-    ar:(saved.content_ar && typeof saved.content_ar==='object')?{...saved.content_ar}:{...content.ar}
+    fr:(saved.content_fr && typeof saved.content_fr==='object')?{...saved.content_fr}:{...payload.content_fr},
+    ar:(saved.content_ar && typeof saved.content_ar==='object')?{...saved.content_ar}:{...payload.content_ar}
   };
   if(SITE_CONTENT.fr.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.fr.__background_url;
   applySiteContent();
@@ -1652,7 +1659,7 @@ async function renderAdminSettings(){
       ${keys.map(([key])=>{const safe=key.replace(/[^a-z0-9]+/gi,'-'); return `<div class="field"><label>${escHtml(key)} — Français</label><textarea id="front-fr-${safe}" rows="3" style="width:100%;">${escHtml(I18N.fr[key]||'')}</textarea></div>`;}).join('')}
       ${keys.map(([key])=>{const safe=key.replace(/[^a-z0-9]+/gi,'-'); return `<div class="field"><label>${escHtml(key)} — العربية</label><textarea id="front-ar-${safe}" rows="3" style="width:100%;" dir="rtl">${escHtml(I18N.ar[key]||'')}</textarea></div>`;}).join('')}
     </div>
-    <button class="btn btn-primary" id="saveFrontTextsBtn" style="margin-top:18px;">${t("admin.frontSave")}</button>
+    <button type="button" class="btn btn-primary" id="saveFrontTextsBtn" style="margin-top:18px;">${t("admin.frontSave")}</button>
     <div style="height:1px; background:var(--line); margin:30px 0;"></div>
     <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">خلفية الموقع</h3>
     <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">اختار صورة الخلفية اللي بغيتي تبان فالموقع.</p>
@@ -1673,8 +1680,14 @@ async function renderAdminSettings(){
     catch(err){ console.error(err); showToast(err?.message || t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
   });
-  document.getElementById("saveFrontTextsBtn").addEventListener("click",async()=>{
-    const btn=document.getElementById("saveFrontTextsBtn"); btn.disabled=true;
+  document.getElementById("saveFrontTextsBtn").addEventListener("click",async(e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const btn=document.getElementById("saveFrontTextsBtn");
+    if(!btn || btn.disabled) return;
+    const originalLabel=btn.textContent;
+    btn.disabled=true;
+    btn.textContent="جارٍ الحفظ...";
     const content={fr:{...(SITE_CONTENT.fr||{})},ar:{...(SITE_CONTENT.ar||{})}};
     keys.forEach(([key])=>{ const safe=key.replace(/[^a-z0-9]+/gi,'-'); content.fr[key]=document.getElementById(`front-fr-${safe}`).value.trim(); content.ar[key]=document.getElementById(`front-ar-${safe}`).value.trim(); });
     if(SITE_BACKGROUND_URL){ content.fr.__background_url=SITE_BACKGROUND_URL; content.ar.__background_url=SITE_BACKGROUND_URL; } else { delete content.fr.__background_url; delete content.ar.__background_url; }
@@ -1685,7 +1698,7 @@ async function renderAdminSettings(){
     }catch(err){
       console.error(err);
       showToast(err?.message || t("admin.backendWriteError"));
-    }finally{ btn.disabled=false; }
+    }finally{ btn.disabled=false; btn.textContent=originalLabel; }
   });
   const bgBtn=document.getElementById("saveSiteBackgroundBtn");
   if(bgBtn) bgBtn.addEventListener("click",async()=>{
