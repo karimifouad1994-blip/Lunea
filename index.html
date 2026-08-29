@@ -649,7 +649,7 @@ const I18N = {
     "admin.loginTitle":"Espace Admin","admin.email":"Email","admin.password":"Mot de passe","admin.login":"Se connecter","admin.wrongPass":"Email ou mot de passe incorrect","admin.supabaseLoginHint":"Connectez-vous avec le compte Admin Supabase.","admin.loginRequired":"Email et mot de passe requis","admin.backendReadError":"Impossible de charger les données.","admin.backendWriteError":"Impossible d’enregistrer. Vérifiez la connexion Supabase.",
     "admin.title":"Commandes","admin.empty":"Aucune commande pour le moment.","admin.status":"Statut","admin.logout":"Déconnexion",
     "admin.setupTitle":"Créer l'accès Admin","admin.setupSubtitle":"Choisissez un mot de passe pour protéger cet espace.",
-    "admin.newPassword":"Nouveau mot de passe","admin.confirmPassword":"Confirmer le mot de passe","admin.createBtn":"Créer le mot de passe",
+    "admin.currentPassword":"Mot de passe actuel","admin.newPassword":"Nouveau mot de passe","admin.confirmPassword":"Confirmer le nouveau mot de passe","admin.createBtn":"Créer le mot de passe",
     "admin.passMismatch":"Les mots de passe ne correspondent pas","admin.passTooShort":"6 caractères minimum",
     "admin.forgotPassword":"Mot de passe oublié ?","admin.resetConfirm":"Réinitialiser le mot de passe Admin sur cet appareil ?",
     "status.new":"Nouvelle commande","status.confirmed":"Confirmée","status.shipped":"Expédiée","status.delivered":"Livrée","status.cancelled":"Annulée",
@@ -717,7 +717,7 @@ const I18N = {
     "admin.loginTitle":"لوحة التحكم","admin.email":"البريد الإلكتروني","admin.password":"كلمة المرور","admin.login":"دخول","admin.wrongPass":"البريد الإلكتروني أو كلمة المرور غير صحيحة","admin.supabaseLoginHint":"سجّل الدخول بالحساب الإداري الموجود في Supabase.","admin.loginRequired":"أدخل البريد الإلكتروني وكلمة المرور","admin.backendReadError":"تعذر تحميل البيانات.","admin.backendWriteError":"تعذر الحفظ. تحقق من اتصال Supabase.",
     "admin.title":"الطلبات","admin.empty":"لا توجد طلبات حتى الآن.","admin.status":"الحالة","admin.logout":"تسجيل الخروج",
     "admin.setupTitle":"إنشاء وصول الإدارة","admin.setupSubtitle":"اختر كلمة مرور لحماية هذا القسم.",
-    "admin.newPassword":"كلمة المرور الجديدة","admin.confirmPassword":"تأكيد كلمة المرور","admin.createBtn":"إنشاء كلمة المرور",
+    "admin.currentPassword":"كلمة المرور الحالية","admin.newPassword":"كلمة المرور الجديدة","admin.confirmPassword":"تأكيد كلمة المرور","admin.createBtn":"إنشاء كلمة المرور",
     "admin.passMismatch":"كلمتا المرور غير متطابقتين","admin.passTooShort":"6 أحرف على الأقل",
     "admin.forgotPassword":"نسيت كلمة المرور؟","admin.resetConfirm":"إعادة تعيين كلمة مرور الإدارة على هذا الجهاز؟",
     "status.new":"طلب جديد","status.confirmed":"تم التأكيد","status.shipped":"تم الشحن","status.delivered":"تم التسليم","status.cancelled":"ملغى",
@@ -1825,11 +1825,13 @@ async function renderAdminSettings(){
     </div>
     <div style="height:1px; background:var(--line); margin:30px 0;"></div>
     <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">تغيير كلمة السر ديال الأدمين</h3>
-    <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">دخل كلمة السر الجديدة (8 حروف/أرقام على الأقل) وأكدها.</p>
+    <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">دخل كلمة السر الحالية أولاً، ثم كلمة السر الجديدة (8 حروف/أرقام على الأقل) وأكدها.</p>
     <div class="field" style="max-width:700px;">
-      <label>كلمة السر الجديدة</label>
+      <label>كلمة السر الحالية</label>
+      <input type="password" id="adminCurrentPass" autocomplete="current-password" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
+      <label style="margin-top:10px;">كلمة السر الجديدة</label>
       <input type="password" id="adminNewPass" autocomplete="new-password" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
-      <label style="margin-top:10px;">أكد كلمة السر</label>
+      <label style="margin-top:10px;">أكد كلمة السر الجديدة</label>
       <input type="password" id="adminNewPassConfirm" autocomplete="new-password" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
       <button class="btn btn-primary" id="saveAdminPasswordBtn" style="margin-top:12px;">تغيير كلمة السر</button>
     </div>
@@ -1897,17 +1899,29 @@ async function renderAdminSettings(){
   });
   const savePassBtn=document.getElementById("saveAdminPasswordBtn");
   if(savePassBtn) savePassBtn.addEventListener("click", async ()=>{
+    const currentPass=document.getElementById("adminCurrentPass").value;
     const pass1=document.getElementById("adminNewPass").value;
     const pass2=document.getElementById("adminNewPassConfirm").value;
-    if(!pass1 || pass1.length<8){ showToast("كلمة السر خاصها تكون 8 حروف/أرقام على الأقل"); return; }
-    if(pass1!==pass2){ showToast("كلمتا السر ماشي متطابقين"); return; }
+    if(!currentPass){ showToast("دخل كلمة السر الحالية"); return; }
+    if(!pass1 || pass1.length<8){ showToast("كلمة السر الجديدة خاصها تكون 8 حروف/أرقام على الأقل"); return; }
+    if(pass1!==pass2){ showToast("كلمتا السر الجديدة ماشي متطابقين"); return; }
     savePassBtn.disabled=true;
     try{
+      const sessionData=JSON.parse(sessionStorage.getItem(ADMIN_SESSION_KEY)||"null");
+      const email=sessionData?.user?.email;
+      if(!email) throw new Error("Admin email not found");
+      const verify=await fetch(`${SUPABASE_AUTH_URL}/token?grant_type=password`,{
+        method:"POST", headers:supabaseHeaders(SUPABASE_PUBLISHABLE_KEY),
+        body:JSON.stringify({email,password:currentPass})
+      });
+      const verifyData=await verify.json().catch(()=>({}));
+      if(!verify.ok) throw new Error("Mot de passe actuel incorrect");
       const res=await fetch(`${SUPABASE_AUTH_URL}/user`,{
         method:"PUT", headers:supabaseHeaders(getAdminToken()),
         body:JSON.stringify({password:pass1})
       });
       if(!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error_description||d.msg||d.message||"Password update failed"); }
+      document.getElementById("adminCurrentPass").value="";
       document.getElementById("adminNewPass").value="";
       document.getElementById("adminNewPassConfirm").value="";
       showToast("تبدلت كلمة السر بنجاح");
