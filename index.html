@@ -1917,8 +1917,11 @@ async function saveLandingPage(page, onDiag){
 async function deleteLandingPage(id){
   await supabaseRequest(`${SUPABASE_LANDING_URL}?id=eq.${encodeURIComponent(id)}`,{method:"DELETE",headers:{"Prefer":"return=minimal"},token:getAdminToken()});
 }
-async function getPublicLanding(slug){
-  const rows=await supabaseRequest(`${SUPABASE_LANDING_URL}?slug=eq.${encodeURIComponent(slug)}&status=eq.published&select=*`,{token:SUPABASE_PUBLISHABLE_KEY});
+async function getPublicLanding(slug, onDiag){
+  const url=`${SUPABASE_LANDING_URL}?slug=eq.${encodeURIComponent(slug)}&status=eq.published&select=*`;
+  if(onDiag) onDiag({phase:"request", url});
+  const rows=await supabaseRequest(url,{token:SUPABASE_PUBLISHABLE_KEY, onDiag});
+  if(onDiag) onDiag({phase:"result", count:Array.isArray(rows)?rows.length:0, rows});
   if(!Array.isArray(rows)||!rows.length) return null; return landingNormalize(rows[0]);
 }
 function landingImageChoices(){
@@ -2035,12 +2038,23 @@ function renderLandingPublic(p){
 async function bootLandingRoute(){
   const path=location.pathname.replace(/\/+$/,'');
   const params=new URLSearchParams(location.search);
+  const debug=params.get('debug')==='1';
+  const diagLines=[];
+  const onDiag=(info)=>{ diagLines.push(JSON.stringify(info)); };
   let slug=params.get('landing');
   if(!slug && path.startsWith('/p/')) slug=decodeURIComponent(path.slice(3));
   if(!slug) return false;
   if(slug==='preview'){try{const p=JSON.parse(localStorage.getItem('lunea_lp_preview')||'null');if(p){localStorage.removeItem('lunea_lp_preview');renderLandingPublic(p);return true;}}catch(e){}}
-  try{const p=await getPublicLanding(slug);if(p){localStorage.removeItem('lunea_lp_preview');renderLandingPublic(p);return true;}}catch(e){console.error(e)}
-  document.body.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;background:#1c0f16;color:#f8f1e8;font-family:Arial;text-align:center"><div><h1>Landing Page introuvable</h1><p>Cette page n\'existe pas ou n\'est pas publiée.</p></div></div>';return true;
+  let fetchError=null;
+  try{
+    const p=await getPublicLanding(slug, debug?onDiag:undefined);
+    if(p){localStorage.removeItem('lunea_lp_preview');renderLandingPublic(p);return true;}
+  }catch(e){ console.error(e); fetchError=e; if(debug) diagLines.push(`ERROR: ${e?.message||e}`); }
+  const diagHTML=debug?`<pre style="text-align:left;direction:ltr;max-width:640px;margin:20px auto 0;background:#00000066;border:1px solid #ffffff33;padding:14px;border-radius:10px;font-size:11px;line-height:1.6;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#c9ffb0;font-family:monospace">slug: ${slug}
+path: ${path}
+${diagLines.join('\n')}</pre>`:`<p style="margin-top:14px"><a href="?${path.startsWith('/p/')?'':'landing='+encodeURIComponent(slug)+'&'}debug=1" style="color:#e0c690">Voir le diagnostic</a></p>`;
+  document.body.innerHTML=`<div style="min-height:100vh;display:grid;place-items:center;background:#1c0f16;color:#f8f1e8;font-family:Arial;text-align:center;padding:20px"><div><h1>Landing Page introuvable</h1><p>Cette page n'existe pas ou n'est pas publiée.</p>${diagHTML}</div></div>`;
+  return true;
 }
 
 /* ---- Product management view ---- */
