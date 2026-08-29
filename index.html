@@ -1694,7 +1694,7 @@ function renderAdminLogin(){
     if(!confirm(`غادي نصيفطو ليك إيميل استرجاع كلمة السر لـ ${email}. متأكد؟`)) return;
     const btn=document.getElementById("adminForgotBtn"); btn.disabled=true;
     try{
-      const res=await fetch(`${SUPABASE_AUTH_URL}/recover`,{
+      const res=await fetch(`${SUPABASE_AUTH_URL}/recover?redirect_to=${encodeURIComponent(window.location.origin)}`,{
         method:"POST", headers:supabaseHeaders(SUPABASE_PUBLISHABLE_KEY),
         body:JSON.stringify({email})
       });
@@ -2804,9 +2804,70 @@ function bindProductImageEvents(){
 }
 
 /* ============================================================
+   PASSWORD RECOVERY HANDLER
+   Uses the Supabase recovery session from the URL hash and lets
+   the admin choose a new password without depending on a fixed domain.
+   ============================================================ */
+async function handlePasswordRecovery(){
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+  if(!hash) return false;
+  const params = new URLSearchParams(hash);
+  const type = params.get('type');
+  const accessToken = params.get('access_token');
+  if(type !== 'recovery' || !accessToken) return false;
+
+  const wrap = document.getElementById('adminWrap');
+  if(!wrap) return false;
+  const lang = getSavedVisitorLanguage() || SITE_DEFAULT_LANGUAGE || 'ar';
+  setLanguage(lang, false);
+  wrap.innerHTML = `
+    <div class="admin-login">
+      <h2 style="font-family:var(--font-display);font-size:26px;margin-bottom:8px;">تغيير كلمة السر</h2>
+      <p style="color:var(--ivory-dim);font-size:13px;margin-bottom:18px;">دخل كلمة السر الجديدة وأكدها.</p>
+      <div class="field" style="text-align:start;">
+        <label>كلمة السر الجديدة</label>
+        <input type="password" id="recoveryNewPass" autocomplete="new-password">
+      </div>
+      <div class="field" style="text-align:start;">
+        <label>تأكيد كلمة السر الجديدة</label>
+        <input type="password" id="recoveryNewPassConfirm" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary btn-block" id="recoverySaveBtn">تغيير كلمة السر</button>
+    </div>`;
+
+  const btn=document.getElementById('recoverySaveBtn');
+  btn.addEventListener('click', async ()=>{
+    const p1=document.getElementById('recoveryNewPass').value;
+    const p2=document.getElementById('recoveryNewPassConfirm').value;
+    if(!p1 || p1.length<8){ showToast('كلمة السر خاصها تكون 8 حروف/أرقام على الأقل'); return; }
+    if(p1!==p2){ showToast('كلمتا السر الجديدة ماشي متطابقين'); return; }
+    btn.disabled=true;
+    try{
+      const res=await fetch(`${SUPABASE_AUTH_URL}/user`,{
+        method:'PUT',
+        headers:supabaseHeaders(accessToken),
+        body:JSON.stringify({password:p1})
+      });
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error_description||data.msg||data.message||'Password reset failed');
+      sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      showToast('تبدلت كلمة السر بنجاح. دابا دخل بها من جديد.');
+      setTimeout(()=>renderAdminLogin(),700);
+    }catch(err){
+      console.error(err);
+      showToast('ماقدرناش نبدلو كلمة السر. الرابط يمكن يكون سالا أو مستعمل من قبل.');
+    }finally{ btn.disabled=false; }
+  });
+  return true;
+}
+
+/* ============================================================
    INIT
    ============================================================ */
 (async function initLunea(){
+  const recovering = await handlePasswordRecovery();
+  if(recovering) return;
   await loadSiteSettings();
   await loadProductsFromSupabase();
   applyProductOverrides();
