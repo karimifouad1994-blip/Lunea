@@ -110,6 +110,9 @@ section{padding:88px 0;}
 .product-card:hover .product-photo{transform:scale(1.045);}
 .product-visual::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none; background:linear-gradient(180deg, rgba(20,10,15,.05) 0%, rgba(20,10,15,0) 30%, rgba(20,10,15,.38) 100%);}
 .product-visual .badge{position:absolute; top:14px; inset-inline-start:14px; z-index:3; background:rgba(20,10,15,.55); backdrop-filter:blur(6px); border:1px solid var(--line); color:var(--gold-soft); font-size:10px; letter-spacing:.14em; text-transform:uppercase; padding:6px 12px; border-radius:20px;}
+.product-video{width:100%; max-height:260px; border-radius:var(--radius-m); margin:10px 0; background:#000; display:block;}
+#variantVideo video{width:100%; max-height:260px; border-radius:var(--radius-m); margin:10px 0 0; background:#000; display:block;}
+.lp-video{width:100%; max-width:640px; margin:0 auto; display:block; border-radius:14px; background:#000;}
 .product-info{padding:22px 20px 24px;}
 .product-info h3{font-size:23px; color:var(--ivory); margin-bottom:4px;}
 .product-price{color:var(--gold-soft); font-size:16px; font-weight:500; margin-bottom:10px;}
@@ -410,6 +413,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
       <div class="qty-control"><button type="button" class="qty-btn" id="qtyMinus">−</button><span class="qty-value" id="qtyValue">1</span><button type="button" class="qty-btn" id="qtyPlus">+</button></div>
     </div>
     <div class="order-summary" id="variantSummary"></div>
+    <div id="variantVideo"></div>
     <div class="modal-actions"><button class="btn btn-primary btn-block" id="addToCartBtn" data-i18n="product.order">Ajouter au panier</button></div>
   </div>
 </div>
@@ -965,9 +969,17 @@ async function loadProductsFromSupabase(){
       PRODUCT_BACKEND_ROWS={};
       rows.forEach(r=>PRODUCT_BACKEND_ROWS[r.id]=r);
       rows.forEach(r=>{
-        const p=PRODUCTS.find(x=>x.id===r.id); if(!p) return;
+        let p=PRODUCTS.find(x=>x.id===r.id);
+        if(!p){
+          /* Product added via admin "add product" (or from another device) and
+             not part of the original hard-coded PRODUCTS list — register it now
+             so the whole site (grid, cart, checkout...) picks it up automatically. */
+          p = { id:r.id, nameKey:`p.custom.${r.id}.name`, descKey:`p.custom.${r.id}.desc`, badgeKey:`p.custom.${r.id}.badge` };
+          PRODUCTS.push(p);
+        }
         if(r.price!=null) p.price=Number(r.price);
         if(r.enabled!=null) p.enabled=!!r.enabled;
+        p.video = r.video || "";
         if(r.name_fr!=null) I18N.fr[p.nameKey]=r.name_fr;
         if(r.name_ar!=null) I18N.ar[p.nameKey]=r.name_ar;
         if(r.desc_fr!=null) I18N.fr[p.descKey]=r.desc_fr;
@@ -991,7 +1003,7 @@ async function ensureProductsInSupabase(){
     const missing=PRODUCTS.filter(p=>!have.has(p.id)).map(p=>({
       id:p.id,name_fr:I18N.fr[p.nameKey],name_ar:I18N.ar[p.nameKey],desc_fr:I18N.fr[p.descKey],desc_ar:I18N.ar[p.descKey],
       badge_fr:I18N.fr[p.badgeKey],badge_ar:I18N.ar[p.badgeKey],price:p.price,enabled:p.enabled!==false,
-      variants:PRODUCT_VARIANTS[p.id]||null,images:null
+      variants:PRODUCT_VARIANTS[p.id]||null,images:null,video:p.video||""
     }));
     if(missing.length) await supabaseRequest(SUPABASE_PRODUCTS_URL,{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(missing),token:getAdminToken()});
   }catch(err){ console.warn("Products seed skipped/failed",err); }
@@ -999,7 +1011,7 @@ async function ensureProductsInSupabase(){
 async function saveProductToSupabase(id){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   const p=PRODUCTS.find(x=>x.id===id); if(!p) throw new Error("Product not found");
-  const row={name_fr:I18N.fr[p.nameKey],name_ar:I18N.ar[p.nameKey],desc_fr:I18N.fr[p.descKey],desc_ar:I18N.ar[p.descKey],badge_fr:I18N.fr[p.badgeKey],badge_ar:I18N.ar[p.badgeKey],price:p.price,enabled:p.enabled!==false,variants:PRODUCT_VARIANTS[id]||null,images:PRODUCT_IMAGE_GALLERY[id]||null};
+  const row={name_fr:I18N.fr[p.nameKey],name_ar:I18N.ar[p.nameKey],desc_fr:I18N.fr[p.descKey],desc_ar:I18N.ar[p.descKey],badge_fr:I18N.fr[p.badgeKey],badge_ar:I18N.ar[p.badgeKey],price:p.price,enabled:p.enabled!==false,variants:PRODUCT_VARIANTS[id]||null,images:PRODUCT_IMAGE_GALLERY[id]||null,video:p.video||""};
   const result=await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?id=eq.${encodeURIComponent(id)}&select=id`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(row),token:getAdminToken()});
   if(!Array.isArray(result) || !result.length) throw new Error("Product update returned no row");
   return result[0];
@@ -1014,6 +1026,7 @@ function applyProductOverrides(){
     const o = backend ? {
       price: backend.price,
       enabled: backend.enabled,
+      video: backend.video,
       name:{fr:backend.name_fr, ar:backend.name_ar},
       desc:{fr:backend.desc_fr, ar:backend.desc_ar},
       badge:{fr:backend.badge_fr, ar:backend.badge_ar}
@@ -1021,6 +1034,7 @@ function applyProductOverrides(){
     p.enabled = !(o && o.enabled === false);
     if(!o) return;
     if(typeof o.price === "number" && !isNaN(o.price)) p.price = o.price;
+    if(typeof o.video === "string") p.video = o.video;
     ["fr","ar"].forEach(lang=>{
       if(o.name && o.name[lang]) I18N[lang][p.nameKey] = o.name[lang];
       if(o.desc && o.desc[lang]) I18N[lang][p.descKey] = o.desc[lang];
@@ -1173,6 +1187,7 @@ function renderProducts(){
           ${getProductColors(p.id).map(c=>`<span class="swatch" style="background:${c.hex||'#c9a877'}" title="${escAttr(currentLang==='ar'?c.ar:c.fr)}"></span>`).join("")}
           <span class="swatch-label">${t("product.colors")}</span>
         </div>
+        ${p.video ? `<video class="product-video" src="${escAttr(p.video)}" controls preload="none" playsinline muted poster="${escAttr(gallery[0]||'')}"></video>` : ""}
         <button class="btn-order" data-product="${p.id}">${t("product.order")}</button>
       </div>
     </article>`;
@@ -1308,6 +1323,11 @@ function openVariantModal(productId){
   renderVariantOptions();
   updateVariantSummary();
   renderVariantPackInfo();
+  const videoBox = document.getElementById("variantVideo");
+  if(videoBox){
+    videoBox.innerHTML = currentVariantProduct && currentVariantProduct.video
+      ? `<video src="${escAttr(currentVariantProduct.video)}" controls preload="none" playsinline muted></video>` : "";
+  }
   openModal(variantOverlay);
 }
 function closeVariantModal(){ closeModal(variantOverlay); }
@@ -1666,7 +1686,23 @@ function renderAdminLogin(){
       <div class="field" style="text-align:start;"><label>${t("admin.email")}</label><input type="email" id="adminEmail" autocomplete="username"></div>
       <div class="field" style="text-align:start;"><label>${t("admin.password")}</label><input type="password" id="adminPass" autocomplete="current-password"></div>
       <button class="btn btn-primary btn-block" id="adminLoginBtn">${t("admin.login")}</button>
+      <button type="button" class="btn btn-ghost btn-block" id="adminForgotBtn" style="margin-top:10px; font-size:12.5px;">نسيت كلمة السر؟</button>
     </div>`;
+  document.getElementById("adminForgotBtn").addEventListener("click", async ()=>{
+    const email=document.getElementById("adminEmail").value.trim();
+    if(!email){ showToast("دخل الإيميل ديالك أولا"); return; }
+    if(!confirm(`غادي نصيفطو ليك إيميل استرجاع كلمة السر لـ ${email}. متأكد؟`)) return;
+    const btn=document.getElementById("adminForgotBtn"); btn.disabled=true;
+    try{
+      const res=await fetch(`${SUPABASE_AUTH_URL}/recover`,{
+        method:"POST", headers:supabaseHeaders(SUPABASE_PUBLISHABLE_KEY),
+        body:JSON.stringify({email})
+      });
+      if(!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error_description||d.msg||d.message||"Recovery failed"); }
+      showToast("تصيفط ليك إيميل استرجاع كلمة السر، شوف البريد ديالك");
+    }catch(err){ console.error(err); showToast("ماقدرناش نصيفطو الإيميل، عاود جرب من بعد"); }
+    finally{ btn.disabled=false; }
+  });
   document.getElementById("adminLoginBtn").addEventListener("click", async ()=>{
     const email=document.getElementById("adminEmail").value.trim();
     const password=document.getElementById("adminPass").value;
@@ -1742,7 +1778,6 @@ async function renderAdminOrders(){
           <select data-order="${escAttr(o.id)}">
             ${STATUS_IDS.map((sid,idx)=>`<option value="${sid}" ${sid===o.status?"selected":""}>${t(STATUS_KEYS[idx])}</option>`).join("")}
           </select>
-          <button type="button" class="btn btn-ghost" data-order-delete="${escAttr(o.id)}" style="margin-top:12px;">🗑 حذف الطلب</button>
         </div>
       </div>`;
     }).join("");
@@ -1761,20 +1796,6 @@ async function renderAdminOrders(){
         const orders2=loadOrders(); const ord=orders2.find(x=>x.id===orderCode); if(ord){ord.status=status; saveOrders(orders2);}
         await renderAdminOrders();
       }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); sel.disabled=false; }
-    });
-  });
-  document.querySelectorAll("[data-order-delete]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      const orderCode=btn.dataset.orderDelete;
-      if(!confirm("متأكد بغيتي تحذف هاد الطلب؟ ما يمكنش ترجعه من بعد.")) return;
-      btn.disabled=true;
-      try{
-        await deleteOrderInSupabase(orderCode);
-        const orders2=loadOrders().filter(x=>x.id!==orderCode); saveOrders(orders2);
-        showToast("تم حذف الطلب");
-        await renderAdminOrders();
-      }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); btn.disabled=false; }
     });
   });
   const logoutBtn = document.getElementById("adminLogoutBtn");
@@ -1801,6 +1822,16 @@ async function renderAdminSettings(){
       </select>
       <p style="color:var(--ivory-dim); font-size:12px; line-height:1.7; margin-top:8px;">${t("admin.defaultLanguageHint")}</p>
       <button class="btn btn-primary" id="saveSiteSettingsBtn">${t("admin.saveSettings")}</button>
+    </div>
+    <div style="height:1px; background:var(--line); margin:30px 0;"></div>
+    <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">تغيير كلمة السر ديال الأدمين</h3>
+    <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">دخل كلمة السر الجديدة (8 حروف/أرقام على الأقل) وأكدها.</p>
+    <div class="field" style="max-width:700px;">
+      <label>كلمة السر الجديدة</label>
+      <input type="password" id="adminNewPass" autocomplete="new-password" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
+      <label style="margin-top:10px;">أكد كلمة السر</label>
+      <input type="password" id="adminNewPassConfirm" autocomplete="new-password" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
+      <button class="btn btn-primary" id="saveAdminPasswordBtn" style="margin-top:12px;">تغيير كلمة السر</button>
     </div>
     <div style="height:1px; background:var(--line); margin:30px 0;"></div>
     <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">رقم WhatsApp ديال الموقع</h3>
@@ -1863,6 +1894,25 @@ async function renderAdminSettings(){
     try{ await saveSiteDefaultLanguage(lang, diagAppend); diagAppend("DONE: saved successfully"); showToast(t("admin.settingsSaved")); }
     catch(err){ diagAppend(`DONE: threw error -> ${err?.message||err}`); console.error(err); showToast(err?.message || t("admin.backendWriteError")); }
     finally{ btn.disabled=false; }
+  });
+  const savePassBtn=document.getElementById("saveAdminPasswordBtn");
+  if(savePassBtn) savePassBtn.addEventListener("click", async ()=>{
+    const pass1=document.getElementById("adminNewPass").value;
+    const pass2=document.getElementById("adminNewPassConfirm").value;
+    if(!pass1 || pass1.length<8){ showToast("كلمة السر خاصها تكون 8 حروف/أرقام على الأقل"); return; }
+    if(pass1!==pass2){ showToast("كلمتا السر ماشي متطابقين"); return; }
+    savePassBtn.disabled=true;
+    try{
+      const res=await fetch(`${SUPABASE_AUTH_URL}/user`,{
+        method:"PUT", headers:supabaseHeaders(getAdminToken()),
+        body:JSON.stringify({password:pass1})
+      });
+      if(!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error_description||d.msg||d.message||"Password update failed"); }
+      document.getElementById("adminNewPass").value="";
+      document.getElementById("adminNewPassConfirm").value="";
+      showToast("تبدلت كلمة السر بنجاح");
+    }catch(err){ console.error(err); showToast("ماقدرناش نبدلو كلمة السر، عاود جرب"); }
+    finally{ savePassBtn.disabled=false; }
   });
   const waBtn=document.getElementById("saveSiteWhatsappBtn");
   if(waBtn) waBtn.addEventListener("click",async()=>{
@@ -2008,7 +2058,7 @@ let LANDING_EDIT_ID = null;
 
 function landingDefaults(){ return {
   slug:"", status:"draft", language:"fr", title:"", subtitle:"", kicker:"LUNÉA",
-  price:"", oldPrice:"", cta:"Commander maintenant", whatsapp:"", heroImage:"",
+  price:"", oldPrice:"", cta:"Commander maintenant", whatsapp:"", heroImage:"", video:"",
   description:"", benefits:[], reviews:[], faqs:[], gallery:[], showOrderForm:true,
   showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true
 }; }
@@ -2075,6 +2125,7 @@ function landingEditorHTML(p){
       <div><label>Ancien prix</label><input id="lp-oldprice" value="${escAttr(p.oldPrice)}"></div>
       <div><label>Texte bouton</label><input id="lp-cta" value="${escAttr(p.cta)}"></div>
       <div><label>WhatsApp (212...)</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
+      <div class="full"><label>رابط الفيديو (mp4) — كيبان قبل بوطون الطلب</label><input id="lp-video" value="${escAttr(p.video||'')}" placeholder="https://.../video.mp4" style="direction:ltr;text-align:left;"></div>
       <div class="full"><label>Description</label><textarea id="lp-description" rows="4">${escHtml(p.description)}</textarea></div>
     </div></div>
     <div class="admin-card"><h3>Images</h3><small>Les images déjà utilisées par LUNÉA sont proposées automatiquement.</small><div id="lp-images-list" style="margin-top:14px">${imgs.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join('')}</div>
@@ -2104,6 +2155,7 @@ function collectLandingForm(){
   p.faqs=parseLines(document.getElementById('lp-faq').value).map(x=>{const [q,...a]=x.split('|');return {q:q.trim(),a:a.join('|').trim()};});
   p.gallery=[...document.querySelectorAll('[data-lpimg]')].map(x=>x.value.trim()).filter(Boolean);
   p.heroImage=p.gallery[0]||'';
+  p.video=document.getElementById('lp-video')?.value.trim()||'';
   p.sourceProductId=document.getElementById('lp-source-product')?.value||'';
   [['showOrderForm','lp-show-form'],['showWhatsapp','lp-show-wa'],['showGallery','lp-show-gallery'],['showBenefits','lp-show-benefits'],['showReviews','lp-show-reviews'],['showFaq','lp-show-faq']].forEach(([k,id])=>p[k]=document.getElementById(id).checked);
   return p;
@@ -2151,7 +2203,7 @@ function renderLandingPublic(p){
   const reviews=(p.reviews||[]).map(x=>`<div class="lp-review">★ ★ ★ ★ ★<br>${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
   const faqs=(p.faqs||[]).map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
   const gallery=(p.gallery||[]).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(p.title)}">`).join('');
-  document.body.innerHTML=`<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(p.title)}</h1><p class="lp-subtitle">${escHtml(p.subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(p.cta)}</a></div></section><div class="lp-wrap">${p.description?`<section class="lp-section"><h2>${p.language==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(p.description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${p.language==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${p.language==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${p.language==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${p.language==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${p.language==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${p.language==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${p.language==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${p.language==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div><button class="lp-submit" type="submit">${escHtml(p.cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+  document.body.innerHTML=`<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(p.title)}</h1><p class="lp-subtitle">${escHtml(p.subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(p.cta)}</a></div></section><div class="lp-wrap">${p.description?`<section class="lp-section"><h2>${p.language==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(p.description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${p.language==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${p.language==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${p.language==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${p.language==='ar'?'فيديو':'Vidéo'}</h2><video class="lp-video" src="${escAttr(p.video)}" controls preload="none" playsinline></video></section>`:''}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${p.language==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${p.language==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${p.language==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${p.language==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${p.language==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div><button class="lp-submit" type="submit">${escHtml(p.cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
   document.getElementById('lp-order-form')?.addEventListener('submit',async e=>{
     e.preventDefault();
     const f=new FormData(e.target);
@@ -2237,9 +2289,12 @@ function renderProductImagesHTML(p){
 function renderAdminProducts(){
   let html = adminLanguageSwitcherHTML();
   html += adminTabsHTML("products");
-  html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap:12px; flex-wrap:wrap;">
       <h2 style="font-family:var(--font-display); font-size:28px;">${t("admin.productsTitle")}</h2>
-      <button class="btn btn-ghost" id="adminLogoutBtn">${t("admin.logout")}</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" id="addProductBtn">+ منتج جديد</button>
+        <button class="btn btn-ghost" id="adminLogoutBtn">${t("admin.logout")}</button>
+      </div>
     </div>`;
   html += PRODUCTS.map(p=>{
     const enabled = p.enabled !== false;
@@ -2263,6 +2318,7 @@ function renderAdminProducts(){
         <div class="field"><label>${t("admin.field.descAr")}</label><textarea id="pf-desc-ar-${p.id}">${escHtml(I18N.ar[p.descKey])}</textarea></div>
         <div class="field"><label>${t("admin.field.badgeFr")}</label><input type="text" id="pf-badge-fr-${p.id}" value="${escAttr(I18N.fr[p.badgeKey])}"></div>
         <div class="field"><label>${t("admin.field.badgeAr")}</label><input type="text" id="pf-badge-ar-${p.id}" value="${escAttr(I18N.ar[p.badgeKey])}"></div>
+        <div class="field"><label>رابط الفيديو ديال المنتج (mp4)</label><input type="text" id="pf-video-${p.id}" value="${escAttr(p.video||"")}" placeholder="https://.../video.mp4" style="direction:ltr; text-align:left;"></div>
         <div class="field" style="display:flex; align-items:center; gap:10px;">
           <input type="checkbox" id="pf-enabled-${p.id}" ${enabled?"checked":""} style="width:auto;">
           <label style="margin:0;" for="pf-enabled-${p.id}">${t("admin.field.enabled")}</label>
@@ -2311,6 +2367,7 @@ function renderAdminProducts(){
         </div>
 
         <button type="button" class="btn btn-primary" data-save="${p.id}">${t("admin.save")}</button>
+        <button type="button" class="btn btn-ghost" data-deleteproduct="${p.id}" style="margin-inline-start:8px;">🗑 حذف المنتج</button>
       </div>
     </div>`;
   }).join("");
@@ -2327,6 +2384,11 @@ function renderAdminProducts(){
   document.querySelectorAll("[data-save]").forEach(btn=>{
     btn.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation(); await saveProductEdits(String(btn.dataset.save)); });
   });
+  document.querySelectorAll("[data-deleteproduct]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation(); await deleteProductAdmin(String(btn.dataset.deleteproduct)); });
+  });
+  const addBtn = document.getElementById("addProductBtn");
+  if(addBtn) addBtn.addEventListener("click", addNewProductAdmin);
   bindProductImageEvents();
   bindProductVariantEvents();
   const logoutBtn = document.getElementById("adminLogoutBtn");
@@ -2478,6 +2540,7 @@ async function saveProductEdits(id){
   const priceRaw = val("price");
   const descFr = val("desc-fr"), descAr = val("desc-ar");
   const badgeFr = val("badge-fr"), badgeAr = val("badge-ar");
+  const video = val("video");
   const enabled = getField("enabled").checked;
   const stockRaw = val("stock");
   const stock = stockRaw==="" ? null : Math.max(0, parseInt(stockRaw,10));
@@ -2488,7 +2551,7 @@ async function saveProductEdits(id){
   const price = parseFloat(priceRaw);
 
   const prev = {
-    price:p.price, enabled:p.enabled,
+    price:p.price, enabled:p.enabled, video:p.video,
     nameFr:I18N.fr[p.nameKey], nameAr:I18N.ar[p.nameKey],
     descFr:I18N.fr[p.descKey], descAr:I18N.ar[p.descKey],
     badgeFr:I18N.fr[p.badgeKey], badgeAr:I18N.ar[p.badgeKey],
@@ -2502,6 +2565,7 @@ async function saveProductEdits(id){
   I18N.ar[p.descKey] = descAr;
   I18N.fr[p.badgeKey] = badgeFr;
   I18N.ar[p.badgeKey] = badgeAr;
+  p.video = video;
   p.enabled = enabled;
   if(PRODUCT_VARIANTS[id]){
     PRODUCT_VARIANTS[id].stock = stock;
@@ -2514,7 +2578,7 @@ async function saveProductEdits(id){
 
   const overrides = loadProductOverrides();
   overrides[id] = {
-    price:p.price, enabled:p.enabled,
+    price:p.price, enabled:p.enabled, video:p.video,
     name:{ fr:I18N.fr[p.nameKey], ar:I18N.ar[p.nameKey] },
     desc:{ fr:I18N.fr[p.descKey], ar:I18N.ar[p.descKey] },
     badge:{ fr:I18N.fr[p.badgeKey], ar:I18N.ar[p.badgeKey] }
@@ -2527,7 +2591,7 @@ async function saveProductEdits(id){
     renderProducts();
     showToast(t("admin.productSaved"));
   }catch(err){
-    p.price=prev.price; p.enabled=prev.enabled;
+    p.price=prev.price; p.enabled=prev.enabled; p.video=prev.video;
     I18N.fr[p.nameKey]=prev.nameFr; I18N.ar[p.nameKey]=prev.nameAr;
     I18N.fr[p.descKey]=prev.descFr; I18N.ar[p.descKey]=prev.descAr;
     I18N.fr[p.badgeKey]=prev.badgeFr; I18N.ar[p.badgeKey]=prev.badgeAr;
@@ -2538,6 +2602,53 @@ async function saveProductEdits(id){
   }
   openProductId = id;
   renderAdminProducts();
+}
+
+/* ============================================================
+   ADMIN — ADD / DELETE PRODUCT
+   Lets the admin create as many products as needed, and remove
+   any product entirely. Same Supabase table as existing products,
+   same client-side registration pattern as loadProductsFromSupabase.
+   ============================================================ */
+async function addNewProductAdmin(){
+  if(!isAdminAuthenticated()){ showToast(t("admin.backendWriteError")); return; }
+  const id = "prod" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const nameKey = `p.custom.${id}.name`, descKey = `p.custom.${id}.desc`, badgeKey = `p.custom.${id}.badge`;
+  I18N.fr[nameKey] = "Nouveau produit"; I18N.ar[nameKey] = "منتج جديد";
+  I18N.fr[descKey] = ""; I18N.ar[descKey] = "";
+  I18N.fr[badgeKey] = ""; I18N.ar[badgeKey] = "";
+  const p = { id, nameKey, descKey, badgeKey, price:0, enabled:false, video:"" };
+  PRODUCT_VARIANTS[id] = { colors: DEFAULT_COLORS.map(c=>({...c})), sizes: DEFAULT_SIZES.slice(), stock:null, pack:null };
+  PRODUCT_IMAGE_GALLERY[id] = [];
+  PRODUCT_IMAGES[id] = "";
+  const row = {
+    id, name_fr:I18N.fr[nameKey], name_ar:I18N.ar[nameKey], desc_fr:"", desc_ar:"", badge_fr:"", badge_ar:"",
+    price:0, enabled:false, variants:PRODUCT_VARIANTS[id], images:null, video:""
+  };
+  try{
+    await supabaseRequest(SUPABASE_PRODUCTS_URL, {method:"POST", headers:{"Prefer":"return=minimal"}, body:JSON.stringify([row]), token:getAdminToken()});
+    PRODUCTS.push(p);
+    openProductId = id;
+    showToast("تزاد منتج جديد — كمّل المعلومات وصيفط صورة بلي تفعّلو");
+    renderAdminProducts();
+  }catch(err){
+    delete PRODUCT_VARIANTS[id]; delete PRODUCT_IMAGE_GALLERY[id]; delete PRODUCT_IMAGES[id];
+    console.error(err); showToast(err?.message || t("admin.backendWriteError"));
+  }
+}
+async function deleteProductAdmin(id){
+  if(!confirm("متأكد بغيتي تحذف هاد المنتج؟ ما يمكنش ترجعه من بعد.")) return;
+  try{
+    await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?id=eq.${encodeURIComponent(id)}`, {method:"DELETE", headers:{"Prefer":"return=minimal"}, token:getAdminToken()});
+    const idx = PRODUCTS.findIndex(x=>x.id===id);
+    if(idx>-1) PRODUCTS.splice(idx,1);
+    delete PRODUCT_VARIANTS[id]; delete PRODUCT_IMAGE_GALLERY[id]; delete PRODUCT_IMAGES[id];
+    delete PRODUCT_BACKEND_ROWS[id];
+    if(openProductId===id) openProductId=null;
+    showToast("تم حذف المنتج");
+    renderProducts();
+    renderAdminProducts();
+  }catch(err){ console.error(err); showToast(err?.message || t("admin.backendWriteError")); }
 }
 
 /* ============================================================
