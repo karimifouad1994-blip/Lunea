@@ -838,6 +838,40 @@ function applySiteContent(){
 }
 async function saveSiteContent(content){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+
+  const payload={
+    id:"site",
+    content_fr:{...(content.fr||{})},
+    content_ar:{...(content.ar||{})}
+  };
+
+  const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?select=id`,{
+    method:"POST",
+    headers:{
+      "Prefer":"resolution=merge-duplicates,return=representation"
+    },
+    body:JSON.stringify(payload),
+    token:getAdminToken()
+  });
+
+  if(!Array.isArray(result) || !result.length){
+    throw new Error("لم يتم حفظ النصوص. تحقق من صلاحيات site_settings.");
+  }
+
+  SITE_CONTENT={
+    fr:{...payload.content_fr},
+    ar:{...payload.content_ar}
+  };
+
+  if(SITE_CONTENT.fr.__background_url)
+    SITE_BACKGROUND_URL=SITE_CONTENT.fr.__background_url;
+  else if(SITE_CONTENT.ar.__background_url)
+    SITE_BACKGROUND_URL=SITE_CONTENT.ar.__background_url;
+
+  applySiteContent();
+  applySiteBackground();
+}
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   const payload={content_fr:{...(content.fr||{})},content_ar:{...(content.ar||{})}};
   const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
   if(!Array.isArray(result) || !result.length) throw new Error("لم يتم حفظ النصوص. تأكد من صلاحية UPDATE على جدول site_settings.");
