@@ -802,6 +802,13 @@ async function updateOrderStatusInSupabase(orderCode,status){
   if(!Array.isArray(result) || !result.length) throw new Error("Order status update returned no row (check Supabase RLS policies for UPDATE on Orders)");
   return result[0];
 }
+async function deleteOrderInSupabase(orderCode){
+  await supabaseRequest(`${SUPABASE_ORDERS_URL}?order_code=eq.${encodeURIComponent(orderCode)}`, {
+    method:"DELETE",
+    headers:{"Prefer":"return=minimal"},
+    token:getAdminToken()
+  });
+}
 
 /* ============================================================
    SITE SETTINGS — DEFAULT LANGUAGE
@@ -1735,6 +1742,7 @@ async function renderAdminOrders(){
           <select data-order="${escAttr(o.id)}">
             ${STATUS_IDS.map((sid,idx)=>`<option value="${sid}" ${sid===o.status?"selected":""}>${t(STATUS_KEYS[idx])}</option>`).join("")}
           </select>
+          <button type="button" class="btn btn-ghost" data-order-delete="${escAttr(o.id)}" style="margin-top:12px;">🗑 حذف الطلب</button>
         </div>
       </div>`;
     }).join("");
@@ -1753,6 +1761,20 @@ async function renderAdminOrders(){
         const orders2=loadOrders(); const ord=orders2.find(x=>x.id===orderCode); if(ord){ord.status=status; saveOrders(orders2);}
         await renderAdminOrders();
       }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); sel.disabled=false; }
+    });
+  });
+  document.querySelectorAll("[data-order-delete]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const orderCode=btn.dataset.orderDelete;
+      if(!confirm("متأكد بغيتي تحذف هاد الطلب؟ ما يمكنش ترجعه من بعد.")) return;
+      btn.disabled=true;
+      try{
+        await deleteOrderInSupabase(orderCode);
+        const orders2=loadOrders().filter(x=>x.id!==orderCode); saveOrders(orders2);
+        showToast("تم حذف الطلب");
+        await renderAdminOrders();
+      }catch(err){ console.error(err); showToast(t("admin.backendWriteError")); btn.disabled=false; }
     });
   });
   const logoutBtn = document.getElementById("adminLogoutBtn");
