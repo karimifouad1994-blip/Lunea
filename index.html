@@ -838,43 +838,18 @@ function applySiteContent(){
 }
 async function saveSiteContent(content){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
-
-  const payload={
-    id:"site",
-    content_fr:{...(content.fr||{})},
-    content_ar:{...(content.ar||{})}
-  };
-
-  const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?select=id`,{
-    method:"POST",
-    headers:{
-      "Prefer":"resolution=merge-duplicates,return=representation"
-    },
-    body:JSON.stringify(payload),
-    token:getAdminToken()
-  });
-
-  if(!Array.isArray(result) || !result.length){
-    throw new Error("لم يتم حفظ النصوص. تحقق من صلاحيات site_settings.");
-  }
-
-  SITE_CONTENT={
-    fr:{...payload.content_fr},
-    ar:{...payload.content_ar}
-  };
-
-  if(SITE_CONTENT.fr.__background_url)
-    SITE_BACKGROUND_URL=SITE_CONTENT.fr.__background_url;
-  else if(SITE_CONTENT.ar.__background_url)
-    SITE_BACKGROUND_URL=SITE_CONTENT.ar.__background_url;
-
-  applySiteContent();
-  applySiteBackground();
-}
-  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   const payload={content_fr:{...(content.fr||{})},content_ar:{...(content.ar||{})}};
-  const result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
-  if(!Array.isArray(result) || !result.length) throw new Error("لم يتم حفظ النصوص. تأكد من صلاحية UPDATE على جدول site_settings.");
+  const token=getAdminToken();
+  let result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,{
+    method:"PATCH", headers:{"Prefer":"return=representation"}, body:JSON.stringify(payload), token
+  });
+  if(!Array.isArray(result) || !result.length){
+    result=await supabaseRequest(SUPABASE_SETTINGS_URL,{
+      method:"POST", headers:{"Prefer":"resolution=merge-duplicates,return=representation"},
+      body:JSON.stringify({id:"site",...payload}), token
+    });
+  }
+  if(!Array.isArray(result) || !result.length) throw new Error("لم يتم حفظ النصوص. تأكد من صلاحية UPDATE/INSERT على جدول site_settings.");
   SITE_CONTENT={fr:{...payload.content_fr},ar:{...payload.content_ar}};
   if(SITE_CONTENT.fr.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.fr.__background_url;
   else if(SITE_CONTENT.ar.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.ar.__background_url;
@@ -885,12 +860,17 @@ async function saveSiteContent(content){
 async function saveSiteDefaultLanguage(lang){
   if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
   if(lang!=="ar" && lang!=="fr") throw new Error("Invalid language");
-  const result = await supabaseRequest(`${SUPABASE_SETTINGS_URL}?select=id`,{
-    method:"POST",
-    headers:{"Prefer":"resolution=merge-duplicates,return=representation"},
-    body:JSON.stringify({id:"site",default_language:lang}),
-    token:getAdminToken()
+  const token=getAdminToken();
+  let result=await supabaseRequest(`${SUPABASE_SETTINGS_URL}?id=eq.site&select=id`,{
+    method:"PATCH", headers:{"Prefer":"return=representation"},
+    body:JSON.stringify({default_language:lang}), token
   });
+  if(!Array.isArray(result) || !result.length){
+    result=await supabaseRequest(SUPABASE_SETTINGS_URL,{
+      method:"POST", headers:{"Prefer":"resolution=merge-duplicates,return=representation"},
+      body:JSON.stringify({id:"site",default_language:lang}), token
+    });
+  }
   if(!Array.isArray(result) || !result.length) throw new Error("Site language save returned no row (check Supabase RLS policies for INSERT/UPDATE on site_settings)");
   SITE_DEFAULT_LANGUAGE=lang;
 }
@@ -917,7 +897,7 @@ function saveVisitorLanguage(lang){
 const PRODUCT_OVERRIDES_KEY = "lunea_product_overrides";
 async function loadProductsFromSupabase(){
   try{
-    const rows=await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?select=*&order=id.asc`, {token:SUPABASE_PUBLISHABLE_KEY});
+    const rows=await supabaseRequest(`${SUPABASE_PRODUCTS_URL}?select=*&order=id.asc`, {token:getAdminToken() || SUPABASE_PUBLISHABLE_KEY});
     if(Array.isArray(rows) && rows.length){
       PRODUCT_BACKEND_ROWS={};
       rows.forEach(r=>PRODUCT_BACKEND_ROWS[r.id]=r);
@@ -1830,7 +1810,7 @@ async function saveLandingPage(page){
   const clean={...page}; delete clean.id;
   const payload={slug:clean.slug,status:clean.status,config:clean,updated_at:new Date().toISOString()};
   let rows;
-  if(page.id && page.id !== '__new__'){
+  if(page.id && page.id !== "__new__"){
     rows=await supabaseRequest(`${SUPABASE_LANDING_URL}?id=eq.${encodeURIComponent(page.id)}`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
   }else{
     rows=await supabaseRequest(SUPABASE_LANDING_URL,{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
@@ -1921,12 +1901,17 @@ async function renderAdminLandingPages(){
   document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Supprimer cette Landing Page ?'))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast('Supprimée');await renderAdminLandingPages();}catch(e){showToast(e?.message||'Erreur');}}));
 }
 function bindLandingEditor(){
+  document.getElementById('lp-language')?.addEventListener('change',()=>{
+    const source=document.getElementById('lp-source-product');
+    if(source?.value) source.dispatchEvent(new Event('change'));
+  });
   document.getElementById('lp-source-product')?.addEventListener('change',()=>{
     const id=document.getElementById('lp-source-product').value; if(!id) return;
     const prod=PRODUCTS.find(x=>x.id===id); if(!prod) return;
     const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v??''};
-    const name=I18N.fr[prod.nameKey]||prod.id;
-    const desc=I18N.fr[prod.descKey]||'';
+    const landingLang=document.getElementById('lp-language')?.value||'fr';
+    const name=I18N[landingLang]?.[prod.nameKey]||I18N.fr[prod.nameKey]||prod.id;
+    const desc=I18N[landingLang]?.[prod.descKey]||I18N.fr[prod.descKey]||'';
     set('lp-title',name); set('lp-subtitle',desc); set('lp-description',desc); set('lp-price',String(prod.price||''));
     const gallery=(PRODUCT_IMAGE_GALLERY[prod.id]||[]).filter(Boolean);
     const list=document.getElementById('lp-images-list');
@@ -2441,6 +2426,8 @@ function bindProductImageEvents(){
    INIT
    ============================================================ */
 (async function initLunea(){
+  const isLandingRoute=await bootLandingRoute();
+  if(isLandingRoute) return;
   await loadSiteSettings();
   await loadProductsFromSupabase();
   applyProductOverrides();
@@ -2451,7 +2438,6 @@ function bindProductImageEvents(){
   updateCartBadge();
   applySiteBackground();
 })();
-window.addEventListener("DOMContentLoaded",()=>{ bootLandingRoute(); });
 </script>
 </body>
 </html>
