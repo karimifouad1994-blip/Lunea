@@ -257,6 +257,40 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .product-gallery-dots{position:absolute;left:50%;bottom:13px;transform:translateX(-50%);z-index:4;display:flex;gap:5px;}
 .product-gallery-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);border:0;padding:0;}
 .product-gallery-dot.active{background:var(--gold-soft);transform:scale(1.25);}
+
+/* ============================================================
+   LANDING PAGES — safe standalone module
+   ============================================================ */
+.lp-preview{background:var(--bg-deep);color:var(--ivory);min-height:100vh;padding-bottom:90px}
+.lp-wrap{max-width:1100px;margin:0 auto;padding:28px 20px}
+.lp-hero{position:relative;min-height:72vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;border-radius:0 0 28px 28px;background-size:cover;background-position:center}
+.lp-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,10,15,.25),rgba(20,10,15,.9))}
+.lp-hero-content{position:relative;z-index:1;max-width:760px;padding:70px 22px}
+.lp-kicker{color:var(--gold-soft);font-size:12px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:12px}
+.lp-title{font-family:var(--font-display);font-size:clamp(42px,7vw,78px);line-height:1.05;margin-bottom:18px}
+.lp-subtitle{font-size:clamp(16px,2vw,21px);color:var(--ivory-dim);margin-bottom:28px}
+.lp-price{font-size:28px;color:var(--gold-soft);margin-bottom:24px;font-weight:500}
+.lp-old-price{text-decoration:line-through;opacity:.5;font-size:17px;margin-inline-start:10px}
+.lp-cta{display:inline-flex;align-items:center;justify-content:center;padding:15px 30px;border-radius:999px;background:var(--gold);color:var(--bg-deep);font-weight:600;box-shadow:0 12px 30px rgba(199,161,92,.25)}
+.lp-section{padding:60px 0}
+.lp-section h2{font-size:36px;text-align:center;margin-bottom:28px}
+.lp-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.lp-gallery img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:18px;border:1px solid var(--line)}
+.lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
+.lp-review{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:12px}
+.lp-faq details{border-bottom:1px solid var(--line);padding:16px 0}.lp-faq summary{cursor:pointer;font-weight:500}
+.lp-order{max-width:620px;margin:0 auto;background:#ffffff08;border:1px solid var(--line);border-radius:22px;padding:24px}
+.lp-order input,.lp-order textarea,.lp-order select,.lp-admin input,.lp-admin textarea,.lp-admin select{width:100%;padding:12px 14px;border-radius:12px;background:#ffffff0d;border:1px solid var(--line);color:var(--ivory);font:inherit}
+.lp-order label,.lp-admin label{display:block;margin:0 0 7px;color:var(--gold-soft);font-size:12px}
+.lp-field{margin-bottom:14px}.lp-submit{width:100%;padding:14px;border-radius:999px;background:var(--gold);color:var(--bg-deep);font-weight:700}
+.lp-sticky{position:fixed;left:16px;right:16px;bottom:16px;z-index:900;display:flex;justify-content:center}.lp-sticky a{min-width:240px;text-align:center}
+.lp-admin .admin-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px}
+.lp-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.lp-admin .full{grid-column:1/-1}.lp-admin small{color:var(--ivory-dim)}
+.lp-status{display:inline-flex;padding:5px 10px;border-radius:999px;background:#ffffff12;font-size:11px}
+.lp-image-row{display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center;margin-bottom:10px}.lp-image-row img{width:90px;height:70px;object-fit:cover;border-radius:10px}
+@media(max-width:640px){.lp-wrap{padding:18px 14px}.lp-section{padding:42px 0}.lp-hero{min-height:76vh}}
 </style>
 </head>
 <body>
@@ -1511,6 +1545,7 @@ function refreshOpenAdminView(){
     const active = document.querySelector('[data-admintab].btn-primary')?.dataset.admintab || "orders";
     if(active === "products") renderAdminProducts();
     else if(active === "settings") renderAdminSettings();
+    else if(active === "landing") renderAdminLandingPages();
     else renderAdminOrders();
   } else renderAdminLogin();
 }
@@ -1548,6 +1583,7 @@ function adminTabsHTML(active){
       <button type="button" class="btn ${active==='orders'?'btn-primary':'btn-ghost'}" data-admintab="orders">${t("admin.ordersTab")}</button>
       <button type="button" class="btn ${active==='products'?'btn-primary':'btn-ghost'}" data-admintab="products">${t("admin.productsTab")}</button>
       <button type="button" class="btn ${active==='settings'?'btn-primary':'btn-ghost'}" data-admintab="settings">${t("admin.settingsTab")}</button>
+      <button type="button" class="btn ${active==='landing'?'btn-primary':'btn-ghost'}" data-admintab="landing">Landing Pages</button>
     </div>`;
 }
 function bindAdminTabs(){
@@ -1555,6 +1591,7 @@ function bindAdminTabs(){
     b.addEventListener("click", ()=>{
       if(b.dataset.admintab==="orders") renderAdminOrders();
       else if(b.dataset.admintab==="products") renderAdminProducts();
+      else if(b.dataset.admintab==="landing") renderAdminLandingPages();
       else renderAdminSettings();
     });
   });
@@ -1733,6 +1770,138 @@ async function renderAdminSettings(){
     }catch(err){ console.error(err); showToast(err?.message||t("admin.backendWriteError")); }
     finally{ clearBg.disabled=false; }
   });
+}
+
+
+/* ============================================================
+   LANDING PAGES — Supabase-backed, isolated from the main site
+   ============================================================ */
+const SUPABASE_LANDING_URL = `${SUPABASE_URL}/rest/v1/landing_pages`;
+let LANDING_PAGES = [];
+let LANDING_EDIT_ID = null;
+
+function landingDefaults(){ return {
+  slug:"", status:"draft", language:"fr", title:"", subtitle:"", kicker:"LUNÉA",
+  price:"", oldPrice:"", cta:"Commander maintenant", whatsapp:"", heroImage:"",
+  description:"", benefits:[], reviews:[], faqs:[], gallery:[], showOrderForm:true,
+  showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true
+}; }
+function landingNormalize(x){ const d=landingDefaults(); const c=x?.config||{}; return {...d,...c, id:x?.id||null, slug:x?.slug||c.slug||"", status:x?.status||c.status||"draft"}; }
+async function fetchLandingPages(){
+  const rows=await supabaseRequest(`${SUPABASE_LANDING_URL}?select=*&order=created_at.desc`,{token:getAdminToken()});
+  LANDING_PAGES=Array.isArray(rows)?rows.map(landingNormalize):[]; return LANDING_PAGES;
+}
+async function saveLandingPage(page){
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  const clean={...page}; delete clean.id;
+  const payload={slug:clean.slug,status:clean.status,config:clean,updated_at:new Date().toISOString()};
+  let rows;
+  if(page.id){
+    rows=await supabaseRequest(`${SUPABASE_LANDING_URL}?id=eq.${encodeURIComponent(page.id)}`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
+  }else{
+    rows=await supabaseRequest(SUPABASE_LANDING_URL,{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
+  }
+  if(!Array.isArray(rows)||!rows.length) throw new Error("Landing Page ma t7fdatsh. T2kked men table landing_pages w RLS.");
+  return landingNormalize(rows[0]);
+}
+async function deleteLandingPage(id){
+  await supabaseRequest(`${SUPABASE_LANDING_URL}?id=eq.${encodeURIComponent(id)}`,{method:"DELETE",headers:{"Prefer":"return=minimal"},token:getAdminToken()});
+}
+async function getPublicLanding(slug){
+  const rows=await supabaseRequest(`${SUPABASE_LANDING_URL}?slug=eq.${encodeURIComponent(slug)}&status=eq.published&select=*`,{token:SUPABASE_PUBLISHABLE_KEY});
+  if(!Array.isArray(rows)||!rows.length) return null; return landingNormalize(rows[0]);
+}
+function landingImageChoices(){
+  const out=[]; Object.values(PRODUCT_IMAGE_GALLERY||{}).forEach(arr=>(arr||[]).forEach(u=>{if(u&&!out.includes(u))out.push(u)}));
+  return out;
+}
+function landingArrayText(arr){ return (arr||[]).map(x=>typeof x==='string'?x:(x.text||x.title||'')).filter(Boolean).join("\n"); }
+function parseLines(v){ return String(v||'').split(/\n+/).map(x=>x.trim()).filter(Boolean); }
+function landingEditorHTML(p){
+  const imgs=(p.gallery||[]); const choices=landingImageChoices();
+  return `<div class="lp-admin">
+    <div class="admin-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="font-family:var(--font-display);font-size:30px">${p.id?'Modifier':'Créer'} Landing Page</h2><small>Draft → Preview → Publish. Le site principal reste séparé.</small></div><span class="lp-status">${escHtml(p.status)}</span></div></div>
+    <div class="admin-card"><h3 style="margin-bottom:16px">Contenu principal</h3><div class="lp-admin-grid">
+      <div><label>Slug / URL</label><input id="lp-slug" value="${escAttr(p.slug)}" placeholder="produit-x"></div>
+      <div><label>Statut</label><select id="lp-status"><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option><option value="published" ${p.status==='published'?'selected':''}>Published</option></select></div>
+      <div><label>Langue</label><select id="lp-language"><option value="fr" ${p.language==='fr'?'selected':''}>Français</option><option value="ar" ${p.language==='ar'?'selected':''}>العربية</option></select></div>
+      <div><label>Kicker</label><input id="lp-kicker" value="${escAttr(p.kicker)}"></div>
+      <div class="full"><label>Titre</label><input id="lp-title" value="${escAttr(p.title)}"></div>
+      <div class="full"><label>Sous-titre</label><textarea id="lp-subtitle" rows="2">${escHtml(p.subtitle)}</textarea></div>
+      <div><label>Prix</label><input id="lp-price" value="${escAttr(p.price)}"></div>
+      <div><label>Ancien prix</label><input id="lp-oldprice" value="${escAttr(p.oldPrice)}"></div>
+      <div><label>Texte bouton</label><input id="lp-cta" value="${escAttr(p.cta)}"></div>
+      <div><label>WhatsApp (212...)</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
+      <div class="full"><label>Description</label><textarea id="lp-description" rows="4">${escHtml(p.description)}</textarea></div>
+    </div></div>
+    <div class="admin-card"><h3>Images</h3><small>Les images déjà utilisées par LUNÉA sont proposées automatiquement.</small><div id="lp-images-list" style="margin-top:14px">${imgs.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join('')}</div>
+      <div style="margin-top:12px"><select id="lp-image-choice"><option value="">Ajouter une image LUNÉA…</option>${choices.map(u=>`<option value="${escAttr(u)}">${escAttr(u.slice(-55))}</option>`).join('')}</select> <button class="btn btn-ghost" id="lp-add-image">Ajouter</button></div>
+      <div style="margin-top:12px"><label>Ou uploader une nouvelle image</label><input type="file" id="lp-image-file" accept="image/*"></div>
+    </div>
+    <div class="admin-card"><h3>Sections</h3><div class="lp-admin-grid">
+      <div><label>Benefits (une ligne = un benefit)</label><textarea id="lp-benefits" rows="5">${escHtml(landingArrayText(p.benefits))}</textarea></div>
+      <div><label>Reviews (une ligne = un avis)</label><textarea id="lp-reviews" rows="5">${escHtml(landingArrayText(p.reviews))}</textarea></div>
+      <div><label>FAQ (format Question | Réponse, une ligne)</label><textarea id="lp-faq" rows="5">${escHtml((p.faqs||[]).map(x=>`${x.q||x.question||''} | ${x.a||x.answer||''}`).join('\n'))}</textarea></div>
+    </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px">
+      ${[['lp-show-form','showOrderForm','Formulaire commande'],['lp-show-wa','showWhatsapp','WhatsApp'],['lp-show-gallery','showGallery','Galerie'],['lp-show-benefits','showBenefits','Benefits'],['lp-show-reviews','showReviews','Reviews'],['lp-show-faq','showFaq','FAQ']].map(([id,k,label])=>`<label style="display:flex;align-items:center;gap:8px;color:var(--ivory)"><input type="checkbox" id="${id}" ${p[k]!==false?'checked':''} style="width:auto"> ${label}</label>`).join('')}
+    </div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-primary" id="lp-save">Enregistrer</button><button class="btn btn-ghost" id="lp-preview">Prévisualiser</button><button class="btn btn-ghost" id="lp-back">Retour</button></div>
+  </div>`;
+}
+function collectLandingForm(){
+  const p=landingNormalize(LANDING_PAGES.find(x=>x.id===LANDING_EDIT_ID)||{}); p.id=LANDING_EDIT_ID==='__new__'?null:LANDING_EDIT_ID;
+  p.slug=document.getElementById('lp-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-|-$/g,'');
+  p.status=document.getElementById('lp-status').value; p.language=document.getElementById('lp-language').value;
+  ['kicker','title','subtitle','price','oldprice','cta','whatsapp','description'].forEach(k=>{const id='lp-'+k.replace('oldprice','oldprice'); p[k==='oldprice'?'oldPrice':k]=document.getElementById(id).value.trim();});
+  p.benefits=parseLines(document.getElementById('lp-benefits').value); p.reviews=parseLines(document.getElementById('lp-reviews').value);
+  p.faqs=parseLines(document.getElementById('lp-faq').value).map(x=>{const [q,...a]=x.split('|');return {q:q.trim(),a:a.join('|').trim()};});
+  p.gallery=[...document.querySelectorAll('[data-lpimg]')].map(x=>x.value.trim()).filter(Boolean);
+  p.heroImage=p.gallery[0]||'';
+  [['showOrderForm','lp-show-form'],['showWhatsapp','lp-show-wa'],['showGallery','lp-show-gallery'],['showBenefits','lp-show-benefits'],['showReviews','lp-show-reviews'],['showFaq','lp-show-faq']].forEach(([k,id])=>p[k]=document.getElementById(id).checked);
+  return p;
+}
+async function renderAdminLandingPages(){
+  if(!isAdminAuthenticated()){renderAdminLogin();return;}
+  let rows=[]; try{rows=await fetchLandingPages();}catch(e){console.error(e);showToast(e?.message||t('admin.backendReadError'));}
+  if(LANDING_EDIT_ID){
+    const p=LANDING_EDIT_ID==='__new__'?{...landingDefaults(),id:'__new__'}:landingNormalize(rows.find(x=>x.id===LANDING_EDIT_ID)||{}); p.id=LANDING_EDIT_ID;
+    document.getElementById('adminWrap').innerHTML=adminLanguageSwitcherHTML()+adminTabsHTML('landing')+landingEditorHTML(p); bindAdminTabs(); bindLandingEditor(); return;
+  }
+  let html=adminLanguageSwitcherHTML()+adminTabsHTML('landing')+`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px"><h2 style="font-family:var(--font-display);font-size:28px">Landing Pages</h2><div><button class="btn btn-primary" id="lp-new">+ Nouvelle</button> <button class="btn btn-ghost" id="adminLogoutBtn">${t('admin.logout')}</button></div></div>`;
+  html+=rows.length?rows.map(p=>`<div class="admin-order"><div class="admin-order-head"><div><b>${escHtml(p.title||p.slug)}</b> — /p/${escHtml(p.slug)}</div><span class="admin-status">${escHtml(p.status)}</span></div><div class="admin-order-body open"><div class="row"><span>${escHtml(p.subtitle||'')}</span><span>${escHtml(p.price||'')}</span></div><div style="margin-top:14px"><button class="btn btn-primary" data-lp-edit="${escAttr(p.id)}">Modifier</button> <a class="btn btn-ghost" href="?landing=${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">Ouvrir</a> <button class="btn btn-ghost" data-lp-delete="${escAttr(p.id)}">Supprimer</button></div></div></div>`).join(''):`<p style="color:var(--ivory-dim)">Aucune Landing Page. Crée la première.</p>`;
+  document.getElementById('adminWrap').innerHTML=html; bindAdminTabs();
+  document.getElementById('adminLogoutBtn')?.addEventListener('click',signOutAdmin); document.getElementById('lp-new')?.addEventListener('click',()=>{LANDING_EDIT_ID='__new__';LANDING_PAGES.push({...landingDefaults(),id:'__new__'});renderAdminLandingPages();});
+  document.querySelectorAll('[data-lp-edit]').forEach(b=>b.addEventListener('click',()=>{LANDING_EDIT_ID=b.dataset.lpEdit;renderAdminLandingPages();}));
+  document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Supprimer cette Landing Page ?'))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast('Supprimée');await renderAdminLandingPages();}catch(e){showToast(e?.message||'Erreur');}}));
+}
+function bindLandingEditor(){
+  document.getElementById('lp-back')?.addEventListener('click',()=>{LANDING_EDIT_ID=null;renderAdminLandingPages();});
+  document.getElementById('lp-add-image')?.addEventListener('click',()=>{const u=document.getElementById('lp-image-choice').value;if(!u)return;const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();});
+  document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast('Image ajoutée');}catch(err){showToast(err?.message||'Upload error');}});
+  bindLandingImageRemove();
+  document.getElementById('lp-save')?.addEventListener('click',async()=>{const b=document.getElementById('lp-save');b.disabled=true;try{const p=collectLandingForm();if(!p.slug||!p.title)throw new Error('Slug et titre obligatoires');const saved=await saveLandingPage(p);LANDING_PAGES=LANDING_PAGES.filter(x=>x.id!==LANDING_EDIT_ID);LANDING_PAGES.unshift(saved);LANDING_EDIT_ID=null;showToast('Landing Page enregistrée');await renderAdminLandingPages();}catch(e){console.error(e);showToast(e?.message||'Erreur de sauvegarde');}finally{b.disabled=false;}});
+  document.getElementById('lp-preview')?.addEventListener('click',()=>{const p=collectLandingForm();sessionStorage.setItem('lunea_lp_preview',JSON.stringify(p));window.open('/p/preview','_blank');});
+}
+function bindLandingImageRemove(){document.querySelectorAll('[data-remove-lpimg]').forEach(b=>b.onclick=()=>b.closest('.lp-image-row')?.remove());}
+function renderLandingPublic(p){
+  const dir=p.language==='ar'?'rtl':'ltr'; document.documentElement.lang=p.language||'fr';document.documentElement.dir=dir;
+  const wa=p.whatsapp?`https://wa.me/${String(p.whatsapp).replace(/[^0-9]/g,'')}`:'';
+  const benefits=(p.benefits||[]).map(x=>`<div class="lp-card">${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
+  const reviews=(p.reviews||[]).map(x=>`<div class="lp-review">★ ★ ★ ★ ★<br>${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
+  const faqs=(p.faqs||[]).map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
+  const gallery=(p.gallery||[]).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(p.title)}">`).join('');
+  document.body.innerHTML=`<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(p.title)}</h1><p class="lp-subtitle">${escHtml(p.subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(p.cta)}</a></div></section><div class="lp-wrap">${p.description?`<section class="lp-section"><h2>${p.language==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(p.description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${p.language==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${p.language==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${p.language==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${p.language==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${p.language==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${p.language==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${p.language==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${p.language==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div><button class="lp-submit" type="submit">${escHtml(p.cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+  document.getElementById('lp-order-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target);const msg=p.language==='ar'?`سلام، بغيت نطلب ${p.title}. الاسم: ${f.get('name')}، الهاتف: ${f.get('phone')}، المدينة: ${f.get('city')}، العنوان: ${f.get('address')}`:`Bonjour, je souhaite commander ${p.title}. Nom: ${f.get('name')}, Téléphone: ${f.get('phone')}, Ville: ${f.get('city')}, Adresse: ${f.get('address')}`;if(wa)window.open(`${wa}?text=${encodeURIComponent(msg)}`,'_blank');else document.getElementById('lp-order-msg').textContent=p.language==='ar'?'تم تسجيل الطلب':'Merci, votre demande a été reçue';});
+}
+async function bootLandingRoute(){
+  const path=location.pathname.replace(/\/+$/,'');
+  const params=new URLSearchParams(location.search);
+  let slug=params.get('landing');
+  if(!slug && path.startsWith('/p/')) slug=decodeURIComponent(path.slice(3));
+  if(!slug) return false;
+  if(slug==='preview'){try{const p=JSON.parse(sessionStorage.getItem('lunea_lp_preview')||'null');if(p){renderLandingPublic(p);return true;}}catch(e){}}
+  try{const p=await getPublicLanding(slug);if(p){renderLandingPublic(p);return true;}}catch(e){console.error(e)}
+  document.body.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;background:#1c0f16;color:#f8f1e8;font-family:Arial;text-align:center"><div><h1>Landing Page introuvable</h1><p>Cette page n\'existe pas ou n\'est pas publiée.</p></div></div>';return true;
 }
 
 /* ---- Product management view ---- */
@@ -2223,6 +2392,7 @@ function bindProductImageEvents(){
   updateCartBadge();
   applySiteBackground();
 })();
+window.addEventListener("DOMContentLoaded",()=>{ bootLandingRoute(); });
 </script>
 </body>
 </html>
