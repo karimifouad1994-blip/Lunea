@@ -873,6 +873,10 @@ async function saveSiteDefaultLanguage(lang){
   }
   if(!Array.isArray(result) || !result.length) throw new Error("Site language save returned no row (check Supabase RLS policies for INSERT/UPDATE on site_settings)");
   SITE_DEFAULT_LANGUAGE=lang;
+  // The admin changed the global default, so the current browser should
+  // immediately follow that default instead of an older visitor choice.
+  try{ localStorage.removeItem(LANGUAGE_STORAGE_KEY); }catch(e){}
+  setLanguage(lang,false);
 }
 
 function getSavedVisitorLanguage(){
@@ -2433,8 +2437,10 @@ function bindProductImageEvents(){
   applyProductOverrides();
   PRODUCT_VARIANTS = buildProductVariants();
   PRODUCT_IMAGE_GALLERY = buildProductImageGallery();
-  const visitorLanguage=getSavedVisitorLanguage() || SITE_DEFAULT_LANGUAGE || "ar";
-  setLanguage(visitorLanguage, false);
+  // Keep an explicit visitor choice when one exists; otherwise use the
+  // language configured in Supabase. Admin changes clear the old choice.
+  const visitorLanguage=getSavedVisitorLanguage();
+  setLanguage(visitorLanguage || SITE_DEFAULT_LANGUAGE || "ar", false);
   updateCartBadge();
   applySiteBackground();
 })();
