@@ -2189,9 +2189,14 @@ function landingEditorHTML(p){
 }
 function collectLandingForm(){
   const p=landingNormalize(LANDING_PAGES.find(x=>x.id===LANDING_EDIT_ID)||{}); p.id=LANDING_EDIT_ID==='__new__'?null:LANDING_EDIT_ID;
-  p.slug=document.getElementById('lp-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-|-$/g,'');
+  /* Slug: keep letters (Arabic, French accents, etc.) and numbers, turn everything
+     else into "-". The old ASCII-only regex silently wiped out any Arabic slug,
+     leaving an empty string and triggering a false "slug required" error. */
+  const slugify = s => (s||"").trim().toLowerCase().replace(/[^\p{L}\p{N}-]+/gu,'-').replace(/^-+|-+$/g,'');
+  p.slug = slugify(document.getElementById('lp-slug').value);
   p.status=document.getElementById('lp-status').value; p.language=document.getElementById('lp-language').value;
   ['kicker','title','subtitle','price','oldprice','cta','whatsapp','description'].forEach(k=>{const id='lp-'+k.replace('oldprice','oldprice'); p[k==='oldprice'?'oldPrice':k]=document.getElementById(id).value.trim();});
+  if(!p.slug) p.slug = slugify(p.title) || ('lp'+Date.now().toString(36));
   p.benefits=parseLines(document.getElementById('lp-benefits').value); p.reviews=parseLines(document.getElementById('lp-reviews').value);
   p.faqs=parseLines(document.getElementById('lp-faq').value).map(x=>{const [q,...a]=x.split('|');return {q:q.trim(),a:a.join('|').trim()};});
   p.gallery=[...document.querySelectorAll('[data-lpimg]')].map(x=>x.value.trim()).filter(Boolean);
