@@ -1819,8 +1819,19 @@ function landingArrayText(arr){ return (arr||[]).map(x=>typeof x==='string'?x:(x
 function parseLines(v){ return String(v||'').split(/\n+/).map(x=>x.trim()).filter(Boolean); }
 function landingEditorHTML(p){
   const imgs=(p.gallery||[]); const choices=landingImageChoices();
+  const sourceProductId=p.sourceProductId||'';
+  const productOptions=PRODUCTS.filter(x=>x.enabled!==false).map(x=>{
+    const nfr=I18N.fr[x.nameKey]||x.id;
+    const nar=I18N.ar[x.nameKey]||nfr;
+    return `<option value="${escAttr(x.id)}" ${sourceProductId===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;
+  }).join('');
   return `<div class="lp-admin">
     <div class="admin-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="font-family:var(--font-display);font-size:30px">${p.id?'Modifier':'Créer'} Landing Page</h2><small>Draft → Preview → Publish. Le site principal reste séparé.</small></div><span class="lp-status">${escHtml(p.status)}</span></div></div>
+    <div class="admin-card"><h3 style="margin-bottom:16px">Source du produit</h3>
+      <div class="lp-admin-grid">
+        <div class="full"><label>Choisir un produit du site</label><select id="lp-source-product"><option value="">— Nouveau produit / contenu personnalisé —</option>${productOptions}</select><small>Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.</small></div>
+      </div>
+    </div>
     <div class="admin-card"><h3 style="margin-bottom:16px">Contenu principal</h3><div class="lp-admin-grid">
       <div><label>Slug / URL</label><input id="lp-slug" value="${escAttr(p.slug)}" placeholder="produit-x"></div>
       <div><label>Statut</label><select id="lp-status"><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option><option value="published" ${p.status==='published'?'selected':''}>Published</option></select></div>
@@ -1857,6 +1868,7 @@ function collectLandingForm(){
   p.faqs=parseLines(document.getElementById('lp-faq').value).map(x=>{const [q,...a]=x.split('|');return {q:q.trim(),a:a.join('|').trim()};});
   p.gallery=[...document.querySelectorAll('[data-lpimg]')].map(x=>x.value.trim()).filter(Boolean);
   p.heroImage=p.gallery[0]||'';
+  p.sourceProductId=document.getElementById('lp-source-product')?.value||'';
   [['showOrderForm','lp-show-form'],['showWhatsapp','lp-show-wa'],['showGallery','lp-show-gallery'],['showBenefits','lp-show-benefits'],['showReviews','lp-show-reviews'],['showFaq','lp-show-faq']].forEach(([k,id])=>p[k]=document.getElementById(id).checked);
   return p;
 }
@@ -1875,6 +1887,19 @@ async function renderAdminLandingPages(){
   document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Supprimer cette Landing Page ?'))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast('Supprimée');await renderAdminLandingPages();}catch(e){showToast(e?.message||'Erreur');}}));
 }
 function bindLandingEditor(){
+  document.getElementById('lp-source-product')?.addEventListener('change',()=>{
+    const id=document.getElementById('lp-source-product').value; if(!id) return;
+    const prod=PRODUCTS.find(x=>x.id===id); if(!prod) return;
+    const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v??''};
+    const name=I18N.fr[prod.nameKey]||prod.id;
+    const desc=I18N.fr[prod.descKey]||'';
+    set('lp-title',name); set('lp-subtitle',desc); set('lp-description',desc); set('lp-price',String(prod.price||''));
+    const gallery=(PRODUCT_IMAGE_GALLERY[prod.id]||[]).filter(Boolean);
+    const list=document.getElementById('lp-images-list');
+    if(list && gallery.length){ list.innerHTML=gallery.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join(''); bindLandingImageRemove(); }
+    const slug=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+    if(!document.getElementById('lp-slug').value) set('lp-slug',slug||('landing-'+prod.id));
+  });
   document.getElementById('lp-back')?.addEventListener('click',()=>{LANDING_EDIT_ID=null;renderAdminLandingPages();});
   document.getElementById('lp-add-image')?.addEventListener('click',()=>{const u=document.getElementById('lp-image-choice').value;if(!u)return;const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();});
   document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast('Image ajoutée');}catch(err){showToast(err?.message||'Upload error');}});
