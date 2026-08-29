@@ -1796,7 +1796,7 @@ async function saveLandingPage(page){
   const clean={...page}; delete clean.id;
   const payload={slug:clean.slug,status:clean.status,config:clean,updated_at:new Date().toISOString()};
   let rows;
-  if(page.id){
+  if(page.id && page.id !== '__new__'){
     rows=await supabaseRequest(`${SUPABASE_LANDING_URL}?id=eq.${encodeURIComponent(page.id)}`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
   }else{
     rows=await supabaseRequest(SUPABASE_LANDING_URL,{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload),token:getAdminToken()});
