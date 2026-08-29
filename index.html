@@ -2033,7 +2033,35 @@ function renderLandingPublic(p){
   const faqs=(p.faqs||[]).map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
   const gallery=(p.gallery||[]).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(p.title)}">`).join('');
   document.body.innerHTML=`<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(p.title)}</h1><p class="lp-subtitle">${escHtml(p.subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(p.cta)}</a></div></section><div class="lp-wrap">${p.description?`<section class="lp-section"><h2>${p.language==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(p.description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${p.language==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${p.language==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${p.language==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${p.language==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${p.language==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${p.language==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${p.language==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${p.language==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div><button class="lp-submit" type="submit">${escHtml(p.cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
-  document.getElementById('lp-order-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target);const msg=p.language==='ar'?`سلام، بغيت نطلب ${p.title}. الاسم: ${f.get('name')}، الهاتف: ${f.get('phone')}، المدينة: ${f.get('city')}، العنوان: ${f.get('address')}`:`Bonjour, je souhaite commander ${p.title}. Nom: ${f.get('name')}, Téléphone: ${f.get('phone')}, Ville: ${f.get('city')}, Adresse: ${f.get('address')}`;if(wa)window.open(`${wa}?text=${encodeURIComponent(msg)}`,'_blank');else document.getElementById('lp-order-msg').textContent=p.language==='ar'?'تم تسجيل الطلب':'Merci, votre demande a été reçue';});
+  document.getElementById('lp-order-form')?.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const f=new FormData(e.target);
+    const submitBtn=e.target.querySelector('.lp-submit');
+    const msgEl=document.getElementById('lp-order-msg');
+    const name=f.get('name'), phone=f.get('phone'), city=f.get('city'), address=f.get('address');
+    const order={
+      id:'LP-'+Date.now().toString(36).toUpperCase(),
+      date:new Date().toISOString(),
+      status:"new",
+      customer:{name, phone, city, address, remark:`Landing Page: ${p.title} (/${p.slug||''})`},
+      items:[{name:p.title, color:'', size:'', qty:1, price:Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0}],
+      total:Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0,
+      payment:"cod"
+    };
+    if(submitBtn) submitBtn.disabled=true;
+    try{ await createOrderInSupabase(order); }
+    catch(err){
+      console.error('Landing order save failed:', err);
+      if(submitBtn) submitBtn.disabled=false;
+      if(msgEl) msgEl.textContent=p.language==='ar'?'تعذر تسجيل الطلب، حاول مرة أخرى':'Erreur, veuillez réessayer';
+      return;
+    }
+    const msg=p.language==='ar'?`سلام، بغيت نطلب ${p.title}. الاسم: ${name}، الهاتف: ${phone}، المدينة: ${city}، العنوان: ${address}`:`Bonjour, je souhaite commander ${p.title}. Nom: ${name}, Téléphone: ${phone}, Ville: ${city}, Adresse: ${address}`;
+    if(msgEl) msgEl.textContent=p.language==='ar'?'تم تسجيل الطلب':'Merci, votre demande a été reçue';
+    if(wa) window.open(`${wa}?text=${encodeURIComponent(msg)}`,'_blank');
+    if(submitBtn) submitBtn.disabled=false;
+    e.target.reset();
+  });
 }
 async function bootLandingRoute(){
   const path=location.pathname.replace(/\/+$/,'');
