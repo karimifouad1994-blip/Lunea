@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/lunea-3.html"
+      "source": "/p/:slug",
+      "destination": "/?landing=:slug"
     }
   ]
 }

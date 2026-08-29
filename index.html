@@ -1880,7 +1880,7 @@ function bindLandingEditor(){
   document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast('Image ajoutée');}catch(err){showToast(err?.message||'Upload error');}});
   bindLandingImageRemove();
   document.getElementById('lp-save')?.addEventListener('click',async()=>{const b=document.getElementById('lp-save');b.disabled=true;try{const p=collectLandingForm();if(!p.slug||!p.title)throw new Error('Slug et titre obligatoires');const saved=await saveLandingPage(p);LANDING_PAGES=LANDING_PAGES.filter(x=>x.id!==LANDING_EDIT_ID);LANDING_PAGES.unshift(saved);LANDING_EDIT_ID=null;showToast('Landing Page enregistrée');await renderAdminLandingPages();}catch(e){console.error(e);showToast(e?.message||'Erreur de sauvegarde');}finally{b.disabled=false;}});
-  document.getElementById('lp-preview')?.addEventListener('click',()=>{const p=collectLandingForm();sessionStorage.setItem('lunea_lp_preview',JSON.stringify(p));window.open('/p/preview','_blank');});
+  document.getElementById('lp-preview')?.addEventListener('click',()=>{const p=collectLandingForm();localStorage.setItem('lunea_lp_preview',JSON.stringify(p));window.open('/p/preview','_blank');});
 }
 function bindLandingImageRemove(){document.querySelectorAll('[data-remove-lpimg]').forEach(b=>b.onclick=()=>b.closest('.lp-image-row')?.remove());}
 function renderLandingPublic(p){
@@ -1899,8 +1899,8 @@ async function bootLandingRoute(){
   let slug=params.get('landing');
   if(!slug && path.startsWith('/p/')) slug=decodeURIComponent(path.slice(3));
   if(!slug) return false;
-  if(slug==='preview'){try{const p=JSON.parse(sessionStorage.getItem('lunea_lp_preview')||'null');if(p){renderLandingPublic(p);return true;}}catch(e){}}
-  try{const p=await getPublicLanding(slug);if(p){renderLandingPublic(p);return true;}}catch(e){console.error(e)}
+  if(slug==='preview'){try{const p=JSON.parse(localStorage.getItem('lunea_lp_preview')||'null');if(p){localStorage.removeItem('lunea_lp_preview');renderLandingPublic(p);return true;}}catch(e){}}
+  try{const p=await getPublicLanding(slug);if(p){localStorage.removeItem('lunea_lp_preview');renderLandingPublic(p);return true;}}catch(e){console.error(e)}
   document.body.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;background:#1c0f16;color:#f8f1e8;font-family:Arial;text-align:center"><div><h1>Landing Page introuvable</h1><p>Cette page n\'existe pas ou n\'est pas publiée.</p></div></div>';return true;
 }
 
