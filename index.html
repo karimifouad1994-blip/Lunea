@@ -301,7 +301,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   <div class="container header-inner">
     <div class="logo">
       <div class="logo-col">
-        <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M16 3a9 9 0 1 0 0 18 7 7 0 1 1 0-18Z" fill="currentColor" opacity=".9"/></svg>LUNÉA</span>
+        <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M16 3a9 9 0 1 0 0 18 7 7 0 1 1 0-18Z" fill="currentColor" opacity=".9"/></svg><span data-brand-mark>LUNÉA</span></span>
         <span class="sub" data-i18n="brand.tagline">Luxury Collection</span>
       </div>
     </div>
@@ -332,7 +332,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   </svg>
   <div class="hero-dust" id="heroDust"></div>
   <p class="eyebrow hero-eyebrow" data-i18n="hero.eyebrow">Nouvelle Collection</p>
-  <h1>LUNÉA</h1>
+  <h1 data-brand-mark>LUNÉA</h1>
   <p class="hero-tagline" data-i18n="brand.tagline">Luxury Collection</p>
   <p class="pitch" data-i18n="hero.pitch">Des pièces délicates, pensées pour sublimer chaque femme marocaine. L'élégance à porter au quotidien.</p>
   <a href="#collection" class="btn btn-primary" data-i18n="hero.cta">Découvrir la collection</a>
@@ -368,14 +368,14 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 <section class="feature-banner">
   <div class="container">
     <p class="quote" data-i18n="feature.quote">« La vraie élégance ne se remarque pas, elle se ressent. »</p>
-    <p class="quote-sign">— LUNÉA</p>
+    <p class="quote-sign">— <span data-brand-mark>LUNÉA</span></p>
   </div>
 </section>
 
 <footer id="footer">
   <div class="container">
     <div class="footer-top">
-      <span class="mark" style="font-size:26px;">LUNÉA</span>
+      <span class="mark" style="font-size:26px;" data-brand-mark>LUNÉA</span>
       <span class="footer-tagline" data-i18n="brand.tagline">Luxury Collection</span>
       <div class="footer-badges">
         <a class="footer-badge" id="footerWhatsappLink" href="https://wa.me/212648701722" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Zm0 15H7V5h10v12Z"/></svg>WhatsApp</a>
@@ -384,7 +384,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 LUNÉA — <span data-i18n="footer.rights">Tous droits réservés</span></span>
+      <span>© 2026 <span data-brand-mark>LUNÉA</span> — <span data-i18n="footer.rights">Tous droits réservés</span></span>
       <div class="lang-switch">
         <button type="button" class="lang-btn" data-lang="fr">🇫🇷 FR</button>
         <button type="button" class="lang-btn active" data-lang="ar">🇲🇦 AR</button>
@@ -810,9 +810,24 @@ async function updateOrderStatusInSupabase(orderCode,status){
    already chosen a language keeps that choice on the same device.
    ============================================================ */
 let SITE_BACKGROUND_URL="";
+let SITE_THEME={};
+let SITE_BRAND_NAME="";
 function applySiteBackground(){
   document.documentElement.style.setProperty("--lunea-admin-bg", SITE_BACKGROUND_URL ? `url("${SITE_BACKGROUND_URL}")` : "none");
   document.body.classList.toggle("has-lunea-custom-bg", !!SITE_BACKGROUND_URL);
+}
+const SITE_THEME_VARS={bgDeep:"--bg-deep",bgPlum:"--bg-plum",bgPlum2:"--bg-plum-2",gold:"--gold",goldSoft:"--gold-soft"};
+function applySiteTheme(){
+  Object.keys(SITE_THEME_VARS).forEach(k=>{
+    const cssVar=SITE_THEME_VARS[k], val=SITE_THEME[k];
+    if(val) document.documentElement.style.setProperty(cssVar, val);
+    else document.documentElement.style.removeProperty(cssVar);
+  });
+}
+function applyBrandName(){
+  const name=(SITE_BRAND_NAME||"LUNÉA").trim()||"LUNÉA";
+  document.querySelectorAll("[data-brand-mark]").forEach(el=>{ el.textContent=name; });
+  document.title=`${name} — Luxury Collection`;
 }
 function applySiteWhatsapp(){
   const el=document.getElementById("footerWhatsappLink");
@@ -844,14 +859,22 @@ async function loadSiteSettings(){
       if(r.content_ar && typeof r.content_ar==='object') SITE_CONTENT.ar={...r.content_ar};
       SITE_BACKGROUND_URL = (SITE_CONTENT.fr && SITE_CONTENT.fr.__background_url) || (SITE_CONTENT.ar && SITE_CONTENT.ar.__background_url) || "";
       SITE_WHATSAPP_NUMBER = (SITE_CONTENT.fr && SITE_CONTENT.fr.__whatsapp_number) || (SITE_CONTENT.ar && SITE_CONTENT.ar.__whatsapp_number) || WHATSAPP_NUMBER_DEFAULT;
+      SITE_BRAND_NAME = (SITE_CONTENT.fr && SITE_CONTENT.fr.__brand_name) || (SITE_CONTENT.ar && SITE_CONTENT.ar.__brand_name) || "";
+      Object.keys(SITE_THEME_VARS).forEach(k=>{
+        const key="__theme_"+k;
+        SITE_THEME[k]=(SITE_CONTENT.fr && SITE_CONTENT.fr[key]) || (SITE_CONTENT.ar && SITE_CONTENT.ar[key]) || "";
+      });
       applySiteContent();
       applySiteBackground();
       applySiteWhatsapp();
+      applySiteTheme();
+      applyBrandName();
       return SITE_DEFAULT_LANGUAGE;
     }
   }catch(err){ console.warn("Supabase site settings unavailable; using local defaults.",err); }
   applySiteContent();
   applySiteWhatsapp();
+  applyBrandName();
   return SITE_DEFAULT_LANGUAGE;
 }
 function applySiteContent(){
@@ -879,9 +902,16 @@ async function saveSiteContent(content, onDiag){
   else if(SITE_CONTENT.ar.__background_url) SITE_BACKGROUND_URL=SITE_CONTENT.ar.__background_url;
   if(SITE_CONTENT.fr.__whatsapp_number) SITE_WHATSAPP_NUMBER=SITE_CONTENT.fr.__whatsapp_number;
   else if(SITE_CONTENT.ar.__whatsapp_number) SITE_WHATSAPP_NUMBER=SITE_CONTENT.ar.__whatsapp_number;
+  SITE_BRAND_NAME=SITE_CONTENT.fr.__brand_name || SITE_CONTENT.ar.__brand_name || "";
+  Object.keys(SITE_THEME_VARS).forEach(k=>{
+    const key="__theme_"+k;
+    SITE_THEME[k]=SITE_CONTENT.fr[key] || SITE_CONTENT.ar[key] || "";
+  });
   applySiteContent();
   applySiteBackground();
   applySiteWhatsapp();
+  applySiteTheme();
+  applyBrandName();
 }
 
 async function saveSiteDefaultLanguage(lang, onDiag){
@@ -1775,6 +1805,27 @@ async function renderAdminSettings(){
       ${SITE_BACKGROUND_URL ? `<button type="button" class="btn btn-ghost" id="clearSiteBackgroundBtn" style="margin-inline-start:8px;">رجوع للخلفية الافتراضية</button>` : ""}
     </div>
     <div style="height:1px; background:var(--line); margin:30px 0;"></div>
+    <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">اسم العلامة (اللي كيبان مكان LUNÉA)</h3>
+    <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">هاد الاسم غادي يبدل "LUNÉA" فكل بلاصة فالموقع (الهيدر، العنوان الرئيسي، الفوتر...). خليه فارغ باش يرجع "LUNÉA".</p>
+    <div class="field" style="max-width:700px;">
+      <input type="text" id="siteBrandName" value="${escAttr(SITE_BRAND_NAME)}" placeholder="LUNÉA" style="width:100%; padding:12px 14px; border-radius:12px; background:#ffffff10; border:1px solid var(--line); color:var(--ivory);">
+      <button class="btn btn-primary" id="saveBrandNameBtn" style="margin-top:12px;">حفظ الاسم</button>
+    </div>
+    <div style="height:1px; background:var(--line); margin:30px 0;"></div>
+    <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">ألوان واجهة الموقع</h3>
+    <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">بدل الألوان اللي بغيتي (بيج، كراميل، بني...). التغيير كيبان مباشرة فكل الموقع.</p>
+    <div class="field" style="max-width:700px; display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px;">
+      <div><label style="display:block;margin-bottom:6px;">الخلفية الأساسية (غامقة)</label><input type="color" id="theme-bgDeep" value="${SITE_THEME.bgDeep||'#1c0f16'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div><label style="display:block;margin-bottom:6px;">الخلفية الثانوية</label><input type="color" id="theme-bgPlum" value="${SITE_THEME.bgPlum||'#2c1620'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div><label style="display:block;margin-bottom:6px;">الخلفية (تدرج)</label><input type="color" id="theme-bgPlum2" value="${SITE_THEME.bgPlum2||'#3a1e2b'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div><label style="display:block;margin-bottom:6px;">الذهبي / كراميل الأساسي</label><input type="color" id="theme-gold" value="${SITE_THEME.gold||'#c7a15c'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div><label style="display:block;margin-bottom:6px;">الذهبي الفاتح</label><input type="color" id="theme-goldSoft" value="${SITE_THEME.goldSoft||'#e0c690'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary" id="saveThemeBtn">حفظ الألوان</button>
+      <button class="btn btn-ghost" id="resetThemeBtn" style="margin-inline-start:8px;">رجوع للألوان الافتراضية</button>
+    </div>
+    <div style="height:1px; background:var(--line); margin:30px 0;"></div>
     <h3 style="font-family:var(--font-display); font-size:24px; margin-bottom:10px;">Diagnostic (Admin)</h3>
     <p style="color:var(--ivory-dim); font-size:12px; margin-bottom:14px;">كيبان هنا تلقائيًا شنو وقع فآخر محاولة حفظ (اللغة أو النصوص): isAdminAuthenticated / getAdminToken / method / URL / status / response. ما فيه حتى secret.</p>
     <pre id="settingsDiagLog" dir="ltr" style="background:#00000066; border:1px solid var(--line); padding:14px; border-radius:10px; font-size:11px; line-height:1.6; max-height:280px; overflow:auto; white-space:pre-wrap; word-break:break-all; text-align:left; color:#c9ffb0; font-family:monospace;"></pre>`;
@@ -1876,6 +1927,52 @@ async function renderAdminSettings(){
       await saveSiteContent(content); SITE_BACKGROUND_URL=""; applySiteBackground(); showToast(t("admin.settingsSaved")); await renderAdminSettings();
     }catch(err){ console.error(err); showToast(err?.message||t("admin.backendWriteError")); }
     finally{ clearBg.disabled=false; }
+  });
+  const brandBtn=document.getElementById("saveBrandNameBtn");
+  if(brandBtn) brandBtn.addEventListener("click",async()=>{
+    const name=document.getElementById("siteBrandName").value.trim();
+    brandBtn.disabled=true;
+    try{
+      const content={fr:{...(SITE_CONTENT.fr||{})},ar:{...(SITE_CONTENT.ar||{})}};
+      if(name){ content.fr.__brand_name=name; content.ar.__brand_name=name; }
+      else{ delete content.fr.__brand_name; delete content.ar.__brand_name; }
+      await saveSiteContent(content);
+      SITE_BRAND_NAME=name; applyBrandName();
+      showToast(t("admin.settingsSaved"));
+    }catch(err){ console.error(err); showToast(err?.message||t("admin.backendWriteError")); }
+    finally{ brandBtn.disabled=false; }
+  });
+  const themeBtn=document.getElementById("saveThemeBtn");
+  if(themeBtn) themeBtn.addEventListener("click",async()=>{
+    themeBtn.disabled=true;
+    try{
+      const content={fr:{...(SITE_CONTENT.fr||{})},ar:{...(SITE_CONTENT.ar||{})}};
+      Object.keys(SITE_THEME_VARS).forEach(k=>{
+        const val=document.getElementById("theme-"+k)?.value;
+        const key="__theme_"+k;
+        if(val){ content.fr[key]=val; content.ar[key]=val; SITE_THEME[k]=val; }
+      });
+      await saveSiteContent(content);
+      applySiteTheme();
+      showToast(t("admin.settingsSaved"));
+    }catch(err){ console.error(err); showToast(err?.message||t("admin.backendWriteError")); }
+    finally{ themeBtn.disabled=false; }
+  });
+  const resetThemeBtn=document.getElementById("resetThemeBtn");
+  if(resetThemeBtn) resetThemeBtn.addEventListener("click",async()=>{
+    resetThemeBtn.disabled=true;
+    try{
+      const content={fr:{...(SITE_CONTENT.fr||{})},ar:{...(SITE_CONTENT.ar||{})}};
+      Object.keys(SITE_THEME_VARS).forEach(k=>{
+        const key="__theme_"+k;
+        delete content.fr[key]; delete content.ar[key]; SITE_THEME[k]="";
+      });
+      await saveSiteContent(content);
+      applySiteTheme();
+      showToast(t("admin.settingsSaved"));
+      await renderAdminSettings();
+    }catch(err){ console.error(err); showToast(err?.message||t("admin.backendWriteError")); }
+    finally{ resetThemeBtn.disabled=false; }
   });
 }
 
