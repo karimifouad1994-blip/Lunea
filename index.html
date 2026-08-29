@@ -1694,9 +1694,12 @@ function renderAdminLogin(){
     if(!confirm(`غادي نصيفطو ليك إيميل استرجاع كلمة السر لـ ${email}. متأكد؟`)) return;
     const btn=document.getElementById("adminForgotBtn"); btn.disabled=true;
     try{
-      const res=await fetch(`${SUPABASE_AUTH_URL}/recover?redirect_to=${encodeURIComponent(window.location.origin)}`,{
+      const res=await fetch(`${SUPABASE_AUTH_URL}/recover`,{
         method:"POST", headers:supabaseHeaders(SUPABASE_PUBLISHABLE_KEY),
-        body:JSON.stringify({email})
+        body:JSON.stringify({
+          email,
+          redirect_to: window.location.origin + window.location.pathname
+        })
       });
       if(!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error_description||d.msg||d.message||"Recovery failed"); }
       showToast("تصيفط ليك إيميل استرجاع كلمة السر، شوف البريد ديالك");
