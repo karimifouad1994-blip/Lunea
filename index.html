@@ -2101,7 +2101,8 @@ function landingDefaults(){ return {
   slug:"", status:"draft", language:"fr", title:"", subtitle:"", kicker:"LUNÉA",
   price:"", oldPrice:"", cta:"Commander maintenant", whatsapp:"", heroImage:"", video:"",
   description:"", benefits:[], reviews:[], faqs:[], gallery:[], showOrderForm:true,
-  showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true
+  showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true,
+  product2Id:"", product2Name:"", product2Price:"", product2Image:""
 }; }
 function landingNormalize(x){ const d=landingDefaults(); const c=x?.config||{}; return {...d,...c, id:x?.id||null, slug:x?.slug||c.slug||"", status:x?.status||c.status||"draft"}; }
 async function fetchLandingPages(){
@@ -2155,6 +2156,15 @@ function landingEditorHTML(p){
         <div class="full"><label>Choisir un produit du site</label><select id="lp-source-product"><option value="">— Nouveau produit / contenu personnalisé —</option>${productOptions}</select><small>Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.</small></div>
       </div>
     </div>
+    <div class="admin-card"><h3 style="margin-bottom:16px">منتج ثاني (اختياري)</h3>
+      <div class="lp-admin-grid">
+        <div class="full"><label>زيدي منتج ثاني للصفحة (اختياري)</label><select id="lp-product2-source"><option value="">— بلا منتج ثاني —</option>${PRODUCTS.filter(x=>x.enabled!==false).map(x=>{const nfr=I18N.fr[x.nameKey]||x.id;return `<option value="${escAttr(x.id)}" ${p.product2Id===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;}).join('')}</select><small>الزبون غادي يقدر يزيدو لطلبه من زر إضافي فforumulaire الطلب، بثمنه الخاص بيه.</small></div>
+        <div><label>اسم المنتج الثاني</label><input id="lp-product2-name" value="${escAttr(p.product2Name||'')}"></div>
+        <div><label>ثمن المنتج الثاني (DH)</label><input id="lp-product2-price" value="${escAttr(p.product2Price||'')}"></div>
+        <div class="full"><label>رابط صورة المنتج الثاني</label><input id="lp-product2-image" value="${escAttr(p.product2Image||'')}" style="direction:ltr;text-align:left;"></div>
+        <input type="hidden" id="lp-product2-id" value="${escAttr(p.product2Id||'')}">
+      </div>
+    </div>
     <div class="admin-card"><h3 style="margin-bottom:16px">Contenu principal</h3><div class="lp-admin-grid">
       <div><label>Slug / URL</label><input id="lp-slug" value="${escAttr(p.slug)}" placeholder="produit-x"></div>
       <div><label>Statut</label><select id="lp-status"><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option><option value="published" ${p.status==='published'?'selected':''}>Published</option></select></div>
@@ -2203,6 +2213,10 @@ function collectLandingForm(){
   p.heroImage=p.gallery[0]||'';
   p.video=document.getElementById('lp-video')?.value.trim()||'';
   p.sourceProductId=document.getElementById('lp-source-product')?.value||'';
+  p.product2Id=document.getElementById('lp-product2-id')?.value||'';
+  p.product2Name=document.getElementById('lp-product2-name')?.value.trim()||'';
+  p.product2Price=document.getElementById('lp-product2-price')?.value.trim()||'';
+  p.product2Image=document.getElementById('lp-product2-image')?.value.trim()||'';
   [['showOrderForm','lp-show-form'],['showWhatsapp','lp-show-wa'],['showGallery','lp-show-gallery'],['showBenefits','lp-show-benefits'],['showReviews','lp-show-reviews'],['showFaq','lp-show-faq']].forEach(([k,id])=>p[k]=document.getElementById(id).checked);
   return p;
 }
@@ -2234,6 +2248,18 @@ function bindLandingEditor(){
     const slug=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
     if(!document.getElementById('lp-slug').value) set('lp-slug',slug||('landing-'+prod.id));
   });
+  document.getElementById('lp-product2-source')?.addEventListener('change',()=>{
+    const id=document.getElementById('lp-product2-source').value;
+    const set=(elId,v)=>{const el=document.getElementById(elId); if(el) el.value=v??''};
+    set('lp-product2-id', id);
+    if(!id){ return; }
+    const prod=PRODUCTS.find(x=>x.id===id); if(!prod) return;
+    const name=I18N.fr[prod.nameKey]||prod.id;
+    const img=(PRODUCT_IMAGE_GALLERY[prod.id]||[]).filter(Boolean)[0]||PRODUCT_IMAGES[prod.id]||'';
+    set('lp-product2-name', name);
+    set('lp-product2-price', String(prod.price||''));
+    set('lp-product2-image', img);
+  });
   document.getElementById('lp-back')?.addEventListener('click',()=>{LANDING_EDIT_ID=null;renderAdminLandingPages();});
   document.getElementById('lp-add-image')?.addEventListener('click',()=>{const u=document.getElementById('lp-image-choice').value;if(!u)return;const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();});
   document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast('Image ajoutée');}catch(err){showToast(err?.message||'Upload error');}});
@@ -2249,20 +2275,28 @@ function renderLandingPublic(p){
   const reviews=(p.reviews||[]).map(x=>`<div class="lp-review">★ ★ ★ ★ ★<br>${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
   const faqs=(p.faqs||[]).map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
   const gallery=(p.gallery||[]).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(p.title)}">`).join('');
-  document.body.innerHTML=`<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(p.title)}</h1><p class="lp-subtitle">${escHtml(p.subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(p.cta)}</a></div></section><div class="lp-wrap">${p.description?`<section class="lp-section"><h2>${p.language==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(p.description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${p.language==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${p.language==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${p.language==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${p.language==='ar'?'فيديو':'Vidéo'}</h2><video class="lp-video" src="${escAttr(p.video)}" controls preload="none" playsinline></video></section>`:''}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${p.language==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${p.language==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${p.language==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${p.language==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${p.language==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div><button class="lp-submit" type="submit">${escHtml(p.cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+  const p2price=Number(String(p.product2Price||'0').replace(/[^0-9.]/g,''))||0;
+  const product2Block = (p.product2Name && p2price) ? `<section class="lp-section"><h2>${p.language==='ar'?'اقتراح إضافي':'Offre complémentaire'}</h2><div class="lp-card" style="max-width:420px;margin:0 auto;text-align:center;padding:20px;">${p.product2Image?`<img src="${escAttr(p.product2Image)}" alt="${escAttr(p.product2Name)}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:14px;">`:''}<div style="font-family:var(--font-display);font-size:20px;margin-bottom:6px;">${escHtml(p.product2Name)}</div><div class="lp-price" style="font-size:20px;">${p2price} DH</div></div></section>` : '';
+
+  document.body.innerHTML=`<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(p.title)}</h1><p class="lp-subtitle">${escHtml(p.subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(p.cta)}</a></div></section><div class="lp-wrap">${p.description?`<section class="lp-section"><h2>${p.language==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(p.description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${p.language==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${p.language==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${p.language==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${p.language==='ar'?'فيديو':'Vidéo'}</h2><video class="lp-video" src="${escAttr(p.video)}" controls preload="none" playsinline></video></section>`:''}${product2Block}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${p.language==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${p.language==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${p.language==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${p.language==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${p.language==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div>${(p.product2Name&&p2price)?`<label class="lp-field" style="display:flex;align-items:center;gap:10px;flex-direction:row;"><input type="checkbox" id="lp-add-product2" style="width:auto;"> <span>${p.language==='ar'?`أضيفي معها ${escHtml(p.product2Name)} (+${p2price} DH)`:`Ajouter aussi ${escHtml(p.product2Name)} (+${p2price} DH)`}</span></label>`:''}<button class="lp-submit" type="submit">${escHtml(p.cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
   document.getElementById('lp-order-form')?.addEventListener('submit',async e=>{
     e.preventDefault();
     const f=new FormData(e.target);
     const submitBtn=e.target.querySelector('.lp-submit');
     const msgEl=document.getElementById('lp-order-msg');
     const name=f.get('name'), phone=f.get('phone'), city=f.get('city'), address=f.get('address');
+    const addProduct2 = document.getElementById('lp-add-product2')?.checked && p.product2Name && p2price;
+    const mainPrice=Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0;
+    const items=[{name:p.title, color:'', size:'', qty:1, price:mainPrice}];
+    if(addProduct2) items.push({name:p.product2Name, color:'', size:'', qty:1, price:p2price});
+    const total = mainPrice + (addProduct2 ? p2price : 0);
     const order={
       id:'LP-'+Date.now().toString(36).toUpperCase(),
       date:new Date().toISOString(),
       status:"new",
       customer:{name, phone, city, address, remark:`Landing Page: ${p.title} (/${p.slug||''})`},
-      items:[{name:p.title, color:'', size:'', qty:1, price:Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0}],
-      total:Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0,
+      items,
+      total,
       payment:"cod"
     };
     if(submitBtn) submitBtn.disabled=true;
@@ -2273,7 +2307,10 @@ function renderLandingPublic(p){
       if(msgEl) msgEl.textContent=p.language==='ar'?'تعذر تسجيل الطلب، حاول مرة أخرى':'Erreur, veuillez réessayer';
       return;
     }
-    const msg=p.language==='ar'?`سلام، بغيت نطلب ${p.title}. الاسم: ${name}، الهاتف: ${phone}، المدينة: ${city}، العنوان: ${address}`:`Bonjour, je souhaite commander ${p.title}. Nom: ${name}, Téléphone: ${phone}, Ville: ${city}, Adresse: ${address}`;
+    const productsText = addProduct2
+      ? (p.language==='ar'?`${p.title} و${p.product2Name}`:`${p.title} et ${p.product2Name}`)
+      : p.title;
+    const msg=p.language==='ar'?`سلام، بغيت نطلب ${productsText}. الاسم: ${name}، الهاتف: ${phone}، المدينة: ${city}، العنوان: ${address}`:`Bonjour, je souhaite commander ${productsText}. Nom: ${name}, Téléphone: ${phone}, Ville: ${city}, Adresse: ${address}`;
     if(msgEl) msgEl.textContent=p.language==='ar'?'تم تسجيل الطلب':'Merci, votre demande a été reçue';
     if(wa) window.open(`${wa}?text=${encodeURIComponent(msg)}`,'_blank');
     if(submitBtn) submitBtn.disabled=false;
