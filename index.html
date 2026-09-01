@@ -674,6 +674,9 @@ const I18N = {
     "admin.images":"Images du produit","admin.imgPrimary":"Principale","admin.imgMoveUp":"Déplacer vers la gauche","admin.imgMoveDown":"Déplacer vers la droite",
     "admin.imgSetPrimary":"Définir comme principale","admin.imgReplace":"Remplacer","admin.imgDelete":"Supprimer","admin.imgAdd":"Ajouter une image",
     "admin.imgDeleteLastError":"Impossible de supprimer la dernière image du produit.","admin.imgSaveError":"Espace de stockage insuffisant dans ce navigateur pour enregistrer cette image.",
+    "admin.field.video":"Vidéo produit (lien mp4)","admin.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur",
+    "admin.videoUploading":"⏳ Téléversement...","admin.videoUploaded":"✅ Vidéo téléversée — cliquez sur « Enregistrer » pour valider","admin.videoUploadToast":"Vidéo téléversée, n'oubliez pas d'enregistrer",
+    "lp.videoLabel":"Vidéo (mp4) — affichée avant le bouton de commande","lp.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur",
     "admin.field.stock":"Quantité disponible (stock)","admin.field.stockPlaceholder":"Illimité",
     "admin.field.packName":"Pack — Nom (Français)","admin.field.packNameAr":"Pack — Nom (Arabe)",
     "admin.field.packPieces":"Pack — Nombre de pièces",
@@ -742,6 +745,9 @@ const I18N = {
     "admin.images":"صور المنتج","admin.imgPrimary":"الصورة الرئيسية","admin.imgMoveUp":"نقل لليسار","admin.imgMoveDown":"نقل لليمين",
     "admin.imgSetPrimary":"تعيين كصورة رئيسية","admin.imgReplace":"استبدال","admin.imgDelete":"حذف","admin.imgAdd":"إضافة صورة",
     "admin.imgDeleteLastError":"لا يمكن حذف الصورة الوحيدة للمنتج.","admin.imgSaveError":"مساحة التخزين غير كافية في هذا المتصفح لحفظ هذه الصورة.",
+    "admin.field.video":"رابط الفيديو ديال المنتج (mp4)","admin.videoUploadLabel":"ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب",
+    "admin.videoUploading":"⏳ كيتلي...","admin.videoUploaded":"✅ تلا الفيديو — سيري ضغطي «حفظ» باش يبقى","admin.videoUploadToast":"تلا الفيديو، ماتنساش تضغط حفظ",
+    "lp.videoLabel":"رابط الفيديو (mp4) — كيبان قبل بوطون الطلب","lp.videoUploadLabel":"ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب",
     "admin.field.stock":"الكمية المتوفرة (المخزون)","admin.field.stockPlaceholder":"غير محدود",
     "admin.field.packName":"الباك — الاسم (بالفرنسية)","admin.field.packNameAr":"الباك — الاسم (بالعربية)",
     "admin.field.packPieces":"الباك — عدد القطع",
@@ -2132,7 +2138,7 @@ let LANDING_PAGES = [];
 let LANDING_EDIT_ID = null;
 
 function landingDefaults(){ return {
-  slug:"", status:"draft", language:"fr", title:"", subtitle:"", kicker:"LUNÉA",
+  slug:"", status:"draft", language:"ar", title:"", subtitle:"", kicker:"LUNÉA",
   price:"", oldPrice:"", cta:"Commander maintenant", whatsapp:"", heroImage:"", video:"",
   description:"", benefits:[], reviews:[], faqs:[], gallery:[], showOrderForm:true,
   showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true,
@@ -2210,8 +2216,8 @@ function landingEditorHTML(p){
       <div><label>Ancien prix</label><input id="lp-oldprice" value="${escAttr(p.oldPrice)}"></div>
       <div><label>Texte bouton</label><input id="lp-cta" value="${escAttr(p.cta)}"></div>
       <div><label>WhatsApp (212...)</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
-      <div class="full"><label>رابط الفيديو (mp4) — كيبان قبل بوطون الطلب</label><input id="lp-video" value="${escAttr(p.video||'')}" placeholder="https://.../video.mp4" style="direction:ltr;text-align:left;"></div>
-      <div class="full"><label>ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب</label><input type="file" accept="video/*" id="lp-video-file"> <span id="lp-video-status" style="font-size:12px;color:var(--gold-soft);"></span></div>
+      <div class="full"><label>${t("lp.videoLabel")}</label><input id="lp-video" value="${escAttr(p.video||'')}" placeholder="https://.../video.mp4" style="direction:ltr;text-align:left;"></div>
+      <div class="full"><label>${t("lp.videoUploadLabel")}</label><input type="file" accept="video/*" id="lp-video-file"> <span id="lp-video-status" style="font-size:12px;color:var(--gold-soft);"></span></div>
       <div class="full"><label>Description</label><textarea id="lp-description" rows="4">${escHtml(p.description)}</textarea></div>
     </div></div>
     <div class="admin-card"><h3>Images</h3><small>Les images déjà utilisées par LUNÉA sont proposées automatiquement.</small><div id="lp-images-list" style="margin-top:14px">${imgs.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join('')}</div>
@@ -2302,13 +2308,13 @@ function bindLandingEditor(){
     const f=e.target.files?.[0]; if(!f)return;
     const statusEl=document.getElementById('lp-video-status');
     const urlInput=document.getElementById('lp-video');
-    if(statusEl) statusEl.textContent="⏳ كيتلي...";
+    if(statusEl) statusEl.textContent=t("admin.videoUploading");
     try{
       const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());
       const u=await uploadProductVideoToStorage(f,'landing-'+slug);
       if(urlInput) urlInput.value=u;
-      if(statusEl) statusEl.textContent="✅ تلا الفيديو — سيري ضغطي «حفظ» باش يبقى";
-      showToast('تلا الفيديو، ماتنساش تضغط حفظ');
+      if(statusEl) statusEl.textContent=t("admin.videoUploaded");
+      showToast(t("admin.videoUploadToast"));
     }catch(err){
       console.error(err);
       if(statusEl) statusEl.textContent="";
@@ -2454,8 +2460,8 @@ function renderAdminProducts(){
         <div class="field"><label>${t("admin.field.descAr")}</label><textarea id="pf-desc-ar-${p.id}">${escHtml(I18N.ar[p.descKey])}</textarea></div>
         <div class="field"><label>${t("admin.field.badgeFr")}</label><input type="text" id="pf-badge-fr-${p.id}" value="${escAttr(I18N.fr[p.badgeKey])}"></div>
         <div class="field"><label>${t("admin.field.badgeAr")}</label><input type="text" id="pf-badge-ar-${p.id}" value="${escAttr(I18N.ar[p.badgeKey])}"></div>
-        <div class="field"><label>رابط الفيديو ديال المنتج (mp4)</label><input type="text" id="pf-video-${p.id}" value="${escAttr(p.video||"")}" placeholder="https://.../video.mp4" style="direction:ltr; text-align:left;"></div>
-        <div class="field"><label>ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب</label><input type="file" accept="video/*" id="pf-video-file-${p.id}"> <span id="pf-video-status-${p.id}" style="font-size:12px;color:var(--gold-soft);"></span></div>
+        <div class="field"><label>${t("admin.field.video")}</label><input type="text" id="pf-video-${p.id}" value="${escAttr(p.video||"")}" placeholder="https://.../video.mp4" style="direction:ltr; text-align:left;"></div>
+        <div class="field"><label>${t("admin.videoUploadLabel")}</label><input type="file" accept="video/*" id="pf-video-file-${p.id}"> <span id="pf-video-status-${p.id}" style="font-size:12px;color:var(--gold-soft);"></span></div>
         <div class="field" style="display:flex; align-items:center; gap:10px;">
           <input type="checkbox" id="pf-enabled-${p.id}" ${enabled?"checked":""} style="width:auto;">
           <label style="margin:0;" for="pf-enabled-${p.id}">${t("admin.field.enabled")}</label>
@@ -2933,12 +2939,12 @@ function bindProductImageEvents(){
       const id = inp.id.replace("pf-video-file-","");
       const statusEl = document.getElementById(`pf-video-status-${id}`);
       const urlInput = document.getElementById(`pf-video-${id}`);
-      if(statusEl) statusEl.textContent = "⏳ كيتلي...";
+      if(statusEl) statusEl.textContent = t("admin.videoUploading");
       try{
         const newUrl = await uploadProductVideoToStorage(file, id);
         if(urlInput) urlInput.value = newUrl;
-        if(statusEl) statusEl.textContent = "✅ تلا الفيديو — سيري ضغطي «حفظ» باش يبقى";
-        showToast("تلا الفيديو، ماتنساش تضغط حفظ");
+        if(statusEl) statusEl.textContent = t("admin.videoUploaded");
+        showToast(t("admin.videoUploadToast"));
       }catch(err){
         console.error(err);
         if(statusEl) statusEl.textContent = "";
