@@ -1099,6 +1099,34 @@ async function uploadProductImageToStorage(file, productId){
   }
   return storagePublicUrl(path);
 }
+/* Upload a raw video file (no resize — video can't go through canvas like images).
+   Same bucket/pattern as uploadProductImageToStorage so no new Supabase bucket
+   or policy is needed, only the existing "video" column on products/landing_pages. */
+async function uploadProductVideoToStorage(file, productId){
+  if(!isAdminAuthenticated()) throw new Error("Admin authentication required");
+  if(!file || !file.type || !file.type.startsWith("video/")) throw new Error("خاص تختار ملف فيديو (mp4)");
+  const maxBytes = 50*1024*1024; // 50MB safety cap — Supabase Storage's default per-file limit
+  if(file.size > maxBytes) throw new Error("الفيديو كبير بزاف (الحد الأقصى 50MB) — ضغطيه شوية وعاودي");
+  const extFromName = (file.name && file.name.includes(".")) ? file.name.split(".").pop().toLowerCase() : "";
+  const ext = extFromName || (file.type.split("/")[1] || "mp4");
+  const path = `${productId}/video-${Date.now()}-${Math.random().toString(36).slice(2,9)}.${ext}`;
+  const res = await fetch(`${SUPABASE_STORAGE_OBJECT_URL}/${storageObjectPath(path)}`, {
+    method:"POST",
+    headers:{
+      "apikey":SUPABASE_PUBLISHABLE_KEY,
+      "Authorization":`Bearer ${getAdminToken()}`,
+      "Content-Type": file.type || "video/mp4",
+      "x-upsert":"false"
+    },
+    body:file
+  });
+  if(!res.ok){
+    let detail="";
+    try{ detail=await res.text(); }catch(e){}
+    throw new Error(`Storage upload ${res.status}: ${detail||res.statusText}`);
+  }
+  return storagePublicUrl(path);
+}
 async function deleteProductImageFromStorage(url){
   const path = storagePathFromUrl(url);
   if(!path || !isAdminAuthenticated()) return;
@@ -2183,6 +2211,7 @@ function landingEditorHTML(p){
       <div><label>Texte bouton</label><input id="lp-cta" value="${escAttr(p.cta)}"></div>
       <div><label>WhatsApp (212...)</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
       <div class="full"><label>رابط الفيديو (mp4) — كيبان قبل بوطون الطلب</label><input id="lp-video" value="${escAttr(p.video||'')}" placeholder="https://.../video.mp4" style="direction:ltr;text-align:left;"></div>
+      <div class="full"><label>ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب</label><input type="file" accept="video/*" id="lp-video-file"> <span id="lp-video-status" style="font-size:12px;color:var(--gold-soft);"></span></div>
       <div class="full"><label>Description</label><textarea id="lp-description" rows="4">${escHtml(p.description)}</textarea></div>
     </div></div>
     <div class="admin-card"><h3>Images</h3><small>Les images déjà utilisées par LUNÉA sont proposées automatiquement.</small><div id="lp-images-list" style="margin-top:14px">${imgs.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join('')}</div>
@@ -2269,6 +2298,24 @@ function bindLandingEditor(){
   document.getElementById('lp-back')?.addEventListener('click',()=>{LANDING_EDIT_ID=null;renderAdminLandingPages();});
   document.getElementById('lp-add-image')?.addEventListener('click',()=>{const u=document.getElementById('lp-image-choice').value;if(!u)return;const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();});
   document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast('Image ajoutée');}catch(err){showToast(err?.message||'Upload error');}});
+  document.getElementById('lp-video-file')?.addEventListener('change',async e=>{
+    const f=e.target.files?.[0]; if(!f)return;
+    const statusEl=document.getElementById('lp-video-status');
+    const urlInput=document.getElementById('lp-video');
+    if(statusEl) statusEl.textContent="⏳ كيتلي...";
+    try{
+      const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());
+      const u=await uploadProductVideoToStorage(f,'landing-'+slug);
+      if(urlInput) urlInput.value=u;
+      if(statusEl) statusEl.textContent="✅ تلا الفيديو — سيري ضغطي «حفظ» باش يبقى";
+      showToast('تلا الفيديو، ماتنساش تضغط حفظ');
+    }catch(err){
+      console.error(err);
+      if(statusEl) statusEl.textContent="";
+      showToast(err?.message||'Upload error');
+    }
+    e.target.value="";
+  });
   bindLandingImageRemove();
   document.getElementById('lp-save')?.addEventListener('click',async()=>{const b=document.getElementById('lp-save');diagClear('lpDiagLog');lpDiagAppend('lp-save click received — starting saveLandingPage()');b.disabled=true;try{const p=collectLandingForm();if(!p.slug||!p.title)throw new Error('Slug et titre obligatoires');const saved=await saveLandingPage(p,lpDiagAppend);lpDiagAppend('DONE: saved successfully');LANDING_PAGES=LANDING_PAGES.filter(x=>x.id!==LANDING_EDIT_ID);LANDING_PAGES.unshift(saved);LANDING_EDIT_ID=null;showToast('Landing Page enregistrée');await renderAdminLandingPages();}catch(e){lpDiagAppend(`DONE: threw error -> ${e?.message||e}`);console.error(e);showToast(e?.message||'Erreur de sauvegarde');}finally{b.disabled=false;}});
   document.getElementById('lp-preview')?.addEventListener('click',()=>{const p=collectLandingForm();localStorage.setItem('lunea_lp_preview',JSON.stringify(p));window.open('/p/preview','_blank');});
@@ -2408,6 +2455,7 @@ function renderAdminProducts(){
         <div class="field"><label>${t("admin.field.badgeFr")}</label><input type="text" id="pf-badge-fr-${p.id}" value="${escAttr(I18N.fr[p.badgeKey])}"></div>
         <div class="field"><label>${t("admin.field.badgeAr")}</label><input type="text" id="pf-badge-ar-${p.id}" value="${escAttr(I18N.ar[p.badgeKey])}"></div>
         <div class="field"><label>رابط الفيديو ديال المنتج (mp4)</label><input type="text" id="pf-video-${p.id}" value="${escAttr(p.video||"")}" placeholder="https://.../video.mp4" style="direction:ltr; text-align:left;"></div>
+        <div class="field"><label>ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب</label><input type="file" accept="video/*" id="pf-video-file-${p.id}"> <span id="pf-video-status-${p.id}" style="font-size:12px;color:var(--gold-soft);"></span></div>
         <div class="field" style="display:flex; align-items:center; gap:10px;">
           <input type="checkbox" id="pf-enabled-${p.id}" ${enabled?"checked":""} style="width:auto;">
           <label style="margin:0;" for="pf-enabled-${p.id}">${t("admin.field.enabled")}</label>
@@ -2872,6 +2920,29 @@ function bindProductImageEvents(){
         PRODUCT_IMAGE_GALLERY[id]=oldGallery; syncPrimaryImage(id);
         saveProductGallery({...loadProductGallery(), [id]:oldGallery});
         console.error(err); showToast(t("admin.backendWriteError"));
+      }
+      inp.value = "";
+    });
+  });
+
+  document.querySelectorAll('input[id^="pf-video-file-"]').forEach(inp=>{
+    inp.addEventListener("click", e=> e.stopPropagation());
+    inp.addEventListener("change", async ()=>{
+      const file = inp.files && inp.files[0];
+      if(!file) return;
+      const id = inp.id.replace("pf-video-file-","");
+      const statusEl = document.getElementById(`pf-video-status-${id}`);
+      const urlInput = document.getElementById(`pf-video-${id}`);
+      if(statusEl) statusEl.textContent = "⏳ كيتلي...";
+      try{
+        const newUrl = await uploadProductVideoToStorage(file, id);
+        if(urlInput) urlInput.value = newUrl;
+        if(statusEl) statusEl.textContent = "✅ تلا الفيديو — سيري ضغطي «حفظ» باش يبقى";
+        showToast("تلا الفيديو، ماتنساش تضغط حفظ");
+      }catch(err){
+        console.error(err);
+        if(statusEl) statusEl.textContent = "";
+        showToast(err?.message || t("admin.backendWriteError"));
       }
       inp.value = "";
     });
