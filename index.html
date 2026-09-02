@@ -282,7 +282,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
 .lp-choose-btn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--gold-soft);background:transparent;color:var(--gold-soft);font-size:13.5px;font-weight:500;cursor:pointer;}
-.lp-product-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px}.lp-product-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.lp-product-head .lp-price{margin-bottom:0}.lp-added-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.lp-added{color:var(--gold-soft);font-size:13.5px}.lp-edit-btn{background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:12.5px;cursor:pointer}.lp-main-required{margin:0;text-align:center;font-size:13px;color:var(--ivory-dim)}.lp-picker{margin-top:12px}
+.lp-product-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px}.lp-product-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.lp-product-head .lp-price{margin-bottom:0}.lp-added-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.lp-added-actions{display:flex;align-items:center;gap:12px}.lp-added{color:var(--gold-soft);font-size:13.5px}.lp-edit-btn,.lp-remove-btn{background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:12.5px;cursor:pointer}.lp-remove-btn{color:#c9a877}.lp-main-required{margin:0;text-align:center;font-size:13px;color:var(--ivory-dim)}.lp-picker{margin-top:12px}
 .lp-product-card{box-shadow:var(--shadow);}
 .lp-product-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
 .lp-product-head b{font-family:var(--font-display);font-size:18px;font-weight:500;}
@@ -2479,16 +2479,27 @@ function renderLandingPublic(p, isPreview){
     const dir=lang==='ar'?'rtl':'ltr'; document.documentElement.lang=lang; document.documentElement.dir=dir;
     const wa=p.whatsapp?`https://wa.me/${String(p.whatsapp).replace(/[^0-9]/g,'')}`:'';
     const title=pick('title'), subtitle=pick('subtitle'), description=pick('description'), cta=pick('cta');
+    const isArabicText = (value)=>/[\u0600-\u06FF]/.test(String(value||''));
     const mainSourceProduct = p.sourceProductId ? PRODUCTS.find(x=>String(x.id)===String(p.sourceProductId)) : null;
     const mainProductName = mainSourceProduct
-      ? ((I18N[lang] && I18N[lang][mainSourceProduct.nameKey]) || (lang==='ar' ? 'المنتج الرئيسي' : 'Produit principal'))
-      : title;
+      ? (lang==='ar'
+          ? ((isArabicText(p.titleAr) ? p.titleAr : '') ||
+             (isArabicText(I18N.ar[mainSourceProduct.nameKey]) ? I18N.ar[mainSourceProduct.nameKey] : '') ||
+             ({'p.string.name':'سترينغ','p.packstring.name':'باك سترينغ — 3 قطع','p.chemise.name':'قميص نوم','p.packchemise.name':'باك قمصان نوم — قطعتان'}[mainSourceProduct.nameKey] || 'المنتج الرئيسي'))
+          : ((p.titleFr || I18N.fr[mainSourceProduct.nameKey] || 'Produit principal')))
+      : (lang==='ar'
+          ? (isArabicText(p.titleAr) ? p.titleAr : 'المنتج الرئيسي')
+          : (p.titleFr || 'Produit principal'));
     const product2SourceProduct = p.product2Id ? PRODUCTS.find(x=>String(x.id)===String(p.product2Id)) : null;
     const product2Name = product2SourceProduct
-      ? ((lang==='ar'
-          ? (p.product2NameAr || I18N.ar[product2SourceProduct.nameKey])
-          : (p.product2NameFr || I18N.fr[product2SourceProduct.nameKey])) || p.product2Name || '')
-      : (lang==='ar' ? (p.product2NameAr||p.product2Name||'') : (p.product2NameFr||p.product2Name||''));
+      ? (lang==='ar'
+          ? ((isArabicText(p.product2NameAr) ? p.product2NameAr : '') ||
+             (isArabicText(I18N.ar[product2SourceProduct.nameKey]) ? I18N.ar[product2SourceProduct.nameKey] : '') ||
+             ({'p.string.name':'سترينغ','p.packstring.name':'باك سترينغ — 3 قطع','p.chemise.name':'قميص نوم','p.packchemise.name':'باك قمصان نوم — قطعتان'}[product2SourceProduct.nameKey] || 'المنتج الإضافي'))
+          : (p.product2NameFr || I18N.fr[product2SourceProduct.nameKey] || 'Produit complémentaire'))
+      : (lang==='ar'
+          ? (isArabicText(p.product2NameAr) ? p.product2NameAr : '')
+          : (p.product2NameFr || ''));
     const benefits=pickArr('benefits').map(x=>`<div class="lp-card">${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
     const reviews=pickArr('reviews').map(x=>`<div class="lp-review">★ ★ ★ ★ ★<br>${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
     const faqs=pickArr('faqs').map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
@@ -2504,7 +2515,7 @@ function renderLandingPublic(p, isPreview){
     /* ---- Main product: independent cart item ---- */
     let mainActionHTML;
     if(mainAdded){
-      mainActionHTML = `<div class="lp-added-row"><span class="lp-added">✓ ${lang==='ar'?'أضيف إلى السلة':'Ajouté au panier'}</span><button type="button" id="lp-main-edit" class="lp-edit-btn">${lang==='ar'?'تعديل':'Modifier'}</button></div>`;
+      mainActionHTML = `<div class="lp-added-row"><span class="lp-added">✓ ${lang==='ar'?'أضيف إلى السلة':'Ajouté au panier'}</span><span class="lp-added-actions"><button type="button" id="lp-main-edit" class="lp-edit-btn">${lang==='ar'?'تعديل':'Modifier'}</button><button type="button" id="lp-main-remove" class="lp-remove-btn">${lang==='ar'?'حذف':'Supprimer'}</button></span></div>`;
     } else if(!mainHasVariants){
       mainActionHTML = `<button type="button" id="lp-main-add" class="lp-choose-btn">${lang==='ar'?'أضيفي إلى السلة':'Ajouter au panier'}</button>`;
     } else if(mainOpen){
@@ -2521,7 +2532,7 @@ function renderLandingPublic(p, isPreview){
     /* ---- Optional product: independent cart item, no checkbox ---- */
     let p2ActionHTML='';
     if(p2Added){
-      p2ActionHTML = `<div class="lp-added-row"><span class="lp-added">✓ ${lang==='ar'?'أضيف إلى السلة':'Ajouté au panier'}</span><button type="button" id="lp-p2-edit" class="lp-edit-btn">${lang==='ar'?'تعديل':'Modifier'}</button></div>`;
+      p2ActionHTML = `<div class="lp-added-row"><span class="lp-added">✓ ${lang==='ar'?'أضيف إلى السلة':'Ajouté au panier'}</span><span class="lp-added-actions"><button type="button" id="lp-p2-edit" class="lp-edit-btn">${lang==='ar'?'تعديل':'Modifier'}</button><button type="button" id="lp-p2-remove" class="lp-remove-btn">${lang==='ar'?'حذف':'Supprimer'}</button></span></div>`;
     } else if(!p2HasVariants){
       p2ActionHTML = `<button type="button" id="lp-p2-add" class="lp-choose-btn">${lang==='ar'?'أضيفي إلى السلة':'Ajouter au panier'}</button>`;
     } else if(p2Open){
@@ -2563,7 +2574,51 @@ function renderLandingPublic(p, isPreview){
 
     document.body.innerHTML=`${closeBtnHTML}${langSwitchHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#lp-main-product">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${description?`<section class="lp-section"><h2>${lang==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${lang==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${lang==='ar'?'فيديو':'Vidéo'}</h2><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}${product2ShowcaseBlock}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${lang==='ar'?'الطلب':'Commander'}</h2>${mainCardHTML}${p2CardHTML}${summaryBlock}${confirmBlock}${formHTML}</section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
 
+    const bindLandingPickerButtons=(root=document)=>{
+      root.querySelectorAll('[data-pack-color]').forEach(btn=>btn.addEventListener('click',()=>{
+        const [idx,cid]=btn.dataset.packColor.split(':');
+        const st=btn.dataset.ns==='main'?mainState:p2State;
+        st.colors[Number(idx)]=cid;
+        refreshLandingPicker(btn.dataset.ns);
+      }));
+      root.querySelectorAll('[data-color]').forEach(btn=>btn.addEventListener('click',()=>{
+        const st=btn.dataset.ns==='main'?mainState:p2State;
+        st.color=btn.dataset.color;
+        refreshLandingPicker(btn.dataset.ns);
+      }));
+      root.querySelectorAll('[data-size]').forEach(btn=>btn.addEventListener('click',()=>{
+        const st=btn.dataset.ns==='main'?mainState:p2State;
+        st.size=btn.dataset.size;
+        refreshLandingPicker(btn.dataset.ns);
+      }));
+    };
+    const refreshLandingPicker=(ns)=>{
+      const isMain=ns==='main';
+      const picker=document.getElementById(isMain?'lp-main-picker':'lp-p2-picker');
+      const variants=isMain?mainVariants:p2Variants;
+      const pack=isMain?mainPack:p2Pack;
+      const hasColors=isMain?mainHasColors:p2HasColors;
+      const hasSizes=isMain?mainHasSizes:p2HasSizes;
+      const state=isMain?mainState:p2State;
+      const ready=isMain?(!mainHasVariants || isReady(mainHasColors,mainPack,mainHasSizes,mainState))
+                           :(!p2HasVariants || isReady(p2HasColors,p2Pack,p2HasSizes,p2State));
+      if(picker){
+        picker.innerHTML=pickerInner(ns,variants,pack,hasColors,hasSizes,state);
+        bindLandingPickerButtons(picker);
+      }
+      const addBtn=document.getElementById(isMain?'lp-main-add':'lp-p2-add');
+      if(addBtn){
+        addBtn.disabled=!ready;
+        addBtn.style.opacity=ready?'1':'.45';
+        addBtn.style.cursor=ready?'pointer':'not-allowed';
+      }
+    };
+
     document.querySelectorAll('[data-lp-lang]').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.lpLang!==lang){ lang=b.dataset.lpLang; paint(); } }));
+    document.querySelector('.lp-hero .lp-cta')?.addEventListener('click',(e)=>{
+      e.preventDefault();
+      document.getElementById('lp-main-product')?.scrollIntoView({behavior:'smooth',block:'start'});
+    });
     document.getElementById('lp-preview-close')?.addEventListener('click',()=>{
       window.close();
       /* window.close() only works on tabs opened via script (e.g. the admin's
@@ -2575,17 +2630,11 @@ function renderLandingPublic(p, isPreview){
     document.getElementById('lp-p2-toggle')?.addEventListener('click',()=>{ p2Open=true; paint(); });
     document.getElementById('lp-main-add')?.addEventListener('click',()=>{ if(!mainVariantReady) return; mainAdded=true; paint(); });
     document.getElementById('lp-main-edit')?.addEventListener('click',()=>{ mainAdded=false; mainOpen=true; paint(); });
+    document.getElementById('lp-main-remove')?.addEventListener('click',()=>{ mainAdded=false; showForm=false; paint(); });
     document.getElementById('lp-p2-add')?.addEventListener('click',()=>{ if(!p2VariantReady) return; p2Added=true; paint(); });
     document.getElementById('lp-p2-edit')?.addEventListener('click',()=>{ p2Added=false; p2Open=true; paint(); });
-    document.querySelectorAll('[data-pack-color]').forEach(btn=>btn.addEventListener('click',()=>{
-      const [idx,cid]=btn.dataset.packColor.split(':'); const st=btn.dataset.ns==='main'?mainState:p2State; st.colors[Number(idx)]=cid; paint();
-    }));
-    document.querySelectorAll('[data-color]').forEach(btn=>btn.addEventListener('click',()=>{
-      const st=btn.dataset.ns==='main'?mainState:p2State; st.color=btn.dataset.color; paint();
-    }));
-    document.querySelectorAll('[data-size]').forEach(btn=>btn.addEventListener('click',()=>{
-      const st=btn.dataset.ns==='main'?mainState:p2State; st.size=btn.dataset.size; paint();
-    }));
+    document.getElementById('lp-p2-remove')?.addEventListener('click',()=>{ p2Added=false; paint(); });
+    bindLandingPickerButtons();
     document.getElementById('lp-confirm-btn')?.addEventListener('click',()=>{
       showForm=true; paint();
       setTimeout(()=>{ document.getElementById('lp-order-form')?.scrollIntoView({behavior:'smooth',block:'center'}); },50);
