@@ -3100,7 +3100,7 @@ async function addNewProductAdmin(){
   I18N.fr[descKey] = ""; I18N.ar[descKey] = "";
   I18N.fr[badgeKey] = ""; I18N.ar[badgeKey] = "";
   const p = { id, nameKey, descKey, badgeKey, price:0, enabled:false, video:"" };
-  PRODUCT_VARIANTS[id] = { colors: DEFAULT_COLORS.map(c=>({...c})), sizes: DEFAULT_SIZES.slice(), stock:null, pack:null };
+  PRODUCT_VARIANTS[id] = { colors: [], sizes: [], stock:null, pack:null };
   PRODUCT_IMAGE_GALLERY[id] = [];
   PRODUCT_IMAGES[id] = "";
   const row = {
