@@ -2469,6 +2469,7 @@ function renderLandingPublic(p, isPreview){
   let p2Open=false, p2Added=false;
 
   let showForm=false;
+  let orderPlaced=false;
 
   const labelFor=(variants,id)=>{ const c=(variants&&variants.colors||[]).find(x=>x.id===id); return c ? ((lang==='ar'?c.ar:c.fr)||c.fr||c.id) : (id||''); };
   const isReady=(hasColors,pack,hasSizes,state)=>{
@@ -2542,7 +2543,10 @@ function renderLandingPublic(p, isPreview){
     } else {
       mainActionHTML = `<button type="button" id="lp-main-toggle" class="lp-choose-btn">${lang==='ar'?'اختاري المقاس واللون':'Choisir taille & couleur'}</button>`;
     }
-    const mainCardHTML=`<div id="lp-main-product" class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
+    const mainCardHTML = orderPlaced ? `<div id="lp-main-product" class="lp-card lp-product-card" style="text-align:center;padding:32px 20px;">
+      <div style="font-family:var(--font-display);font-size:24px;margin-bottom:10px;">${lang==='ar'?'تم الطلب بنجاح ❤️':'Commande passée avec succès ❤️'}</div>
+      <p style="color:var(--ivory-dim);font-size:15px">${lang==='ar'?'غادي نتصلو بيك قريبا لتأكيد الطلب':'Nous vous contacterons bientôt pour confirmer votre commande'}</p>
+    </div>` : `<div id="lp-main-product" class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
       ${mainImageURL?`<img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">`:''}
       <div class="lp-product-label">${lang==='ar'?'المنتج الرئيسي':'Produit principal'}</div>
       <div class="lp-product-head"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice} DH</span></div>
@@ -2564,14 +2568,14 @@ function renderLandingPublic(p, isPreview){
       p2ActionHTML = `<button type="button" id="lp-p2-toggle" class="lp-choose-btn">${lang==='ar'?'اختاري المقاس واللون':'Choisir taille & couleur'}</button>`;
     }
     const p2RequiredNotice = (p2Added && !mainAdded) ? `<p class="lp-main-required">${lang==='ar'?'أضيفي المنتج الرئيسي إلى السلة لإكمال الطلب':'Ajoutez le produit principal au panier pour finaliser la commande'}</p>` : '';
-    const p2CardHTML = (product2Name && p2price) ? `<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
+    const p2CardHTML = orderPlaced ? '' : ((product2Name && p2price) ? `<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
       ${p2ImageURL?`<img src="${escAttr(p2ImageURL)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="cursor:default">`:''}
       <div class="lp-product-label">${lang==='ar'?'إضافة اختيارية':'Ajout optionnel'}</div>
       <div class="lp-product-head"><b>${escHtml(product2Name)}</b><span class="lp-price">${p2price} DH</span></div>
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${p2ActionHTML}
       ${p2RequiredNotice}
-    </div>` : '';
+    </div>` : '');
 
     /* ---- Cart summary + confirm step ---- */
     /* Cart summary: show only products actually added to the cart. */
@@ -2598,7 +2602,7 @@ function renderLandingPublic(p, isPreview){
 
     const cartFabHTML=`<button type="button" id="lp-cart-fab" class="lp-cart-fab" aria-label="${lang==='ar'?'فتح السلة':'Ouvrir le panier'}">🛒<span id="lp-cart-count" class="lp-cart-count">${(mainAdded?1:0)+(p2Added?1:0)}</span></button><div id="lp-cart-drawer" class="lp-cart-drawer" aria-hidden="true"><div class="lp-cart-panel"><div class="lp-cart-head"><div style="font-family:var(--font-display);font-size:22px">${lang==='ar'?'سلتك':'Votre panier'}</div><button type="button" id="lp-cart-close" class="lp-cart-close">×</button></div><div id="lp-cart-live"></div></div></div>`;
     const lightboxHTML = mainGalleryImages.length>1 ? `<div id="lp-lightbox" class="lp-lightbox" aria-hidden="true"><button type="button" id="lp-lightbox-close" class="lp-lightbox-close">✕</button><div class="lp-lightbox-imgs">${mainGalleryImages.map(u=>`<img src="${escAttr(u)}">`).join('')}</div></div>` : '';
-    document.body.innerHTML=`${cartFabHTML}${closeBtnHTML}${langSwitchHTML}${lightboxHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}${description?`<p style="max-width:640px;margin:14px auto 0;text-align:center;color:var(--ivory-dim);font-size:16px">${escHtml(description)}</p>`:''}<a class="lp-cta" href="#lp-main-product">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${p.showOrderForm?`<section class="lp-section" id="order">${mainCardHTML.replace('__LP_FORM_HERE__',formHTML)}${p2CardHTML}</section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}<p style="text-align:center;color:var(--ivory-dim);font-size:14px;margin-top:30px">${lang==='ar'?'التوصيل مجاني في جميع أنحاء المغرب':'Livraison gratuite partout au Maroc'}</p></div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+    document.body.innerHTML=`${cartFabHTML}${closeBtnHTML}${langSwitchHTML}${lightboxHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}${description?`<p style="max-width:640px;margin:14px auto 0;text-align:center;color:var(--ivory-dim);font-size:16px">${escHtml(description)}</p>`:''}<a class="lp-cta" href="#lp-main-product">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${p.showOrderForm?`<section class="lp-section" id="order">${mainCardHTML.replace('__LP_FORM_HERE__',formHTML)}${p2CardHTML}</section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}<p style="text-align:center;color:var(--ivory-dim);font-size:14px;margin-top:30px">${lang==='ar'?'التوصيل مجاني في جميع أنحاء المغرب':'Livraison gratuite partout au Maroc'}</p>${wa?`<div style="display:flex;justify-content:center;margin-top:16px"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
 
     const bindLandingPickerButtons=(root=document)=>{
       root.querySelectorAll('[data-pack-color]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -2704,10 +2708,9 @@ document.getElementById('lp-cart-fab')?.addEventListener('click',()=>{const d=do
         : title;
       const variantText = mainColorText ? (lang==='ar'?` (${mainColorText})`:` (${mainColorText})`) : '';
       const msg=lang==='ar'?`سلام، بغيت نطلب ${productsText}${variantText}. الاسم: ${name}، الهاتف: ${phone}، المدينة: ${city}، العنوان: ${address}`:`Bonjour, je souhaite commander ${productsText}${variantText}. Nom: ${name}, Téléphone: ${phone}, Ville: ${city}, Adresse: ${address}`;
-      if(msgEl) msgEl.textContent=lang==='ar'?'تم تسجيل الطلب':'Merci, votre demande a été reçue';
       if(wa) window.open(`${wa}?text=${encodeURIComponent(msg)}`,'_blank');
-      if(submitBtn) submitBtn.disabled=false;
-      e.target.reset();
+      orderPlaced=true; mainAdded=false; p2Added=false; showForm=false;
+      paint();
     });
   }
   paint();
