@@ -282,6 +282,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
 .lp-choose-btn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--gold-soft);background:transparent;color:var(--gold-soft);font-size:13.5px;font-weight:500;cursor:pointer;}
+.lp-product-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px}.lp-product-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.lp-product-head .lp-price{margin-bottom:0}.lp-added-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.lp-added{color:var(--gold-soft);font-size:13.5px}.lp-edit-btn{background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:12.5px;cursor:pointer}.lp-main-required{margin:0;text-align:center;font-size:13px;color:var(--ivory-dim)}.lp-picker{margin-top:12px}
 .lp-product-card{box-shadow:var(--shadow);}
 .lp-product-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
 .lp-product-head b{font-family:var(--font-display);font-size:18px;font-weight:500;}
@@ -2478,7 +2479,16 @@ function renderLandingPublic(p, isPreview){
     const dir=lang==='ar'?'rtl':'ltr'; document.documentElement.lang=lang; document.documentElement.dir=dir;
     const wa=p.whatsapp?`https://wa.me/${String(p.whatsapp).replace(/[^0-9]/g,'')}`:'';
     const title=pick('title'), subtitle=pick('subtitle'), description=pick('description'), cta=pick('cta');
-    const product2Name = lang==='ar' ? (p.product2NameAr||p.product2Name||'') : (p.product2NameFr||p.product2Name||'');
+    const mainSourceProduct = p.sourceProductId ? PRODUCTS.find(x=>String(x.id)===String(p.sourceProductId)) : null;
+    const mainProductName = mainSourceProduct
+      ? ((I18N[lang] && I18N[lang][mainSourceProduct.nameKey]) || (lang==='ar' ? 'المنتج الرئيسي' : 'Produit principal'))
+      : title;
+    const product2SourceProduct = p.product2Id ? PRODUCTS.find(x=>String(x.id)===String(p.product2Id)) : null;
+    const product2Name = product2SourceProduct
+      ? ((lang==='ar'
+          ? (p.product2NameAr || I18N.ar[product2SourceProduct.nameKey])
+          : (p.product2NameFr || I18N.fr[product2SourceProduct.nameKey])) || p.product2Name || '')
+      : (lang==='ar' ? (p.product2NameAr||p.product2Name||'') : (p.product2NameFr||p.product2Name||''));
     const benefits=pickArr('benefits').map(x=>`<div class="lp-card">${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
     const reviews=pickArr('reviews').map(x=>`<div class="lp-review">★ ★ ★ ★ ★<br>${escHtml(typeof x==='string'?x:x.text||'')}</div>`).join('');
     const faqs=pickArr('faqs').map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
@@ -2502,8 +2512,9 @@ function renderLandingPublic(p, isPreview){
     } else {
       mainActionHTML = `<button type="button" id="lp-main-toggle" class="lp-choose-btn">${lang==='ar'?'اختاري المقاس واللون':'Choisir taille & couleur'}</button>`;
     }
-    const mainCardHTML=`<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
-      <div class="lp-product-head"><b>${escHtml(title)}</b><span class="lp-price">${mainPrice} DH</span></div>
+    const mainCardHTML=`<div id="lp-main-product" class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
+      <div class="lp-product-label">${lang==='ar'?'المنتج الرئيسي':'Produit principal'}</div>
+      <div class="lp-product-head"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice} DH</span></div>
       ${mainActionHTML}
     </div>`;
 
@@ -2519,6 +2530,7 @@ function renderLandingPublic(p, isPreview){
       p2ActionHTML = `<button type="button" id="lp-p2-toggle" class="lp-choose-btn">${lang==='ar'?'اختاري المقاس واللون':'Choisir taille & couleur'}</button>`;
     }
     const p2CardHTML = (product2Name && p2price) ? `<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
+      <div class="lp-product-label">${lang==='ar'?'إضافة اختيارية':'Ajout optionnel'}</div>
       <div class="lp-product-head"><b>${escHtml(product2Name)}</b><span class="lp-price">+${p2price} DH</span></div>
       ${p2ActionHTML}
     </div>` : '';
@@ -2526,7 +2538,7 @@ function renderLandingPublic(p, isPreview){
     /* ---- Cart summary + confirm step ---- */
     /* Cart summary: show only products actually added to the cart. */
     const summaryLines = [
-      mainAdded ? `<div class="row"><span>${escHtml(title)}${mainHasVariants?` — ${escHtml(summaryText(mainVariants,mainHasColors,mainPack,mainHasSizes,mainState))}`:''}</span><span>${mainPrice} DH</span></div>` : '',
+      mainAdded ? `<div class="row"><span>${escHtml(mainProductName)}${mainHasVariants?` — ${escHtml(summaryText(mainVariants,mainHasColors,mainPack,mainHasSizes,mainState))}`:''}</span><span>${mainPrice} DH</span></div>` : '',
       p2Added ? `<div class="row"><span>${escHtml(product2Name)}${p2HasVariants?` — ${escHtml(summaryText(p2Variants,p2HasColors,p2Pack,p2HasSizes,p2State))}`:''}</span><span>${p2price} DH</span></div>` : ''
     ].filter(Boolean).join('');
     const summaryBlock = `<div class="lp-card" style="padding:18px;margin-bottom:14px;">
@@ -2549,7 +2561,7 @@ function renderLandingPublic(p, isPreview){
     </div>`;
     const closeBtnHTML = isPreview ? `<button type="button" id="lp-preview-close" title="${lang==='ar'?'رجوع للتعديل':"Retour à l'édition"}" style="position:fixed;top:14px;${sideSame}:14px;z-index:900;width:38px;height:38px;border-radius:50%;background:#1c0f16cc;backdrop-filter:blur(10px);border:1px solid #ffffff33;color:#f8f1e8;font-size:15px;display:flex;align-items:center;justify-content:center;">✖️</button>` : '';
 
-    document.body.innerHTML=`${closeBtnHTML}${langSwitchHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${description?`<section class="lp-section"><h2>${lang==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${lang==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${lang==='ar'?'فيديو':'Vidéo'}</h2><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}${product2ShowcaseBlock}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${lang==='ar'?'الطلب':'Commander'}</h2>${mainCardHTML}${p2CardHTML}${summaryBlock}${confirmBlock}${formHTML}</section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+    document.body.innerHTML=`${closeBtnHTML}${langSwitchHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#lp-main-product">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${description?`<section class="lp-section"><h2>${lang==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${lang==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${lang==='ar'?'فيديو':'Vidéo'}</h2><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}${product2ShowcaseBlock}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${lang==='ar'?'الطلب':'Commander'}</h2>${mainCardHTML}${p2CardHTML}${summaryBlock}${confirmBlock}${formHTML}</section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
 
     document.querySelectorAll('[data-lp-lang]').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.lpLang!==lang){ lang=b.dataset.lpLang; paint(); } }));
     document.getElementById('lp-preview-close')?.addEventListener('click',()=>{
@@ -2585,7 +2597,7 @@ function renderLandingPublic(p, isPreview){
       const msgEl=document.getElementById('lp-order-msg');
       const name=f.get('name'), phone=f.get('phone'), city=f.get('city'), address=f.get('address');
       const mainColorText = summaryText(mainVariants,mainHasColors,mainPack,mainHasSizes,mainState);
-      const items=[{name:title, color: mainPack>1 ? mainState.colors.map(id=>labelFor(mainVariants,id)).join(' + ') : (mainState.color?labelFor(mainVariants,mainState.color):''), size:mainState.size||'', qty:1, price:mainPrice}];
+      const items=[{name:mainProductName, color: mainPack>1 ? mainState.colors.map(id=>labelFor(mainVariants,id)).join(' + ') : (mainState.color?labelFor(mainVariants,mainState.color):''), size:mainState.size||'', qty:1, price:mainPrice}];
       if(p2Added) items.push({name:product2Name, color: p2Pack>1 ? p2State.colors.map(id=>labelFor(p2Variants,id)).join(' + ') : (p2State.color?labelFor(p2Variants,p2State.color):''), size:p2State.size||'', qty:1, price:p2price});
       const order={
         id:'LP-'+Date.now().toString(36).toUpperCase(),
