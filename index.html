@@ -677,6 +677,24 @@ const I18N = {
     "admin.field.video":"Vidéo produit (lien mp4)","admin.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur",
     "admin.videoUploading":"⏳ Téléversement...","admin.videoUploaded":"✅ Vidéo téléversée — cliquez sur « Enregistrer » pour valider","admin.videoUploadToast":"Vidéo téléversée, n'oubliez pas d'enregistrer",
     "lp.videoLabel":"Vidéo (mp4) — affichée avant le bouton de commande","lp.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur",
+    "lp.editTitle":"Modifier Landing Page","lp.createTitle":"Créer Landing Page","lp.statusHint":"Draft → Preview → Publish. Le site principal reste séparé.",
+    "lp.sourceTitle":"Source du produit","lp.sourceSelectLabel":"Choisir un produit du site","lp.sourceNewOption":"— Nouveau produit / contenu personnalisé —",
+    "lp.sourceHint":"Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.",
+    "lp.product2Title":"Produit secondaire (optionnel)","lp.product2SelectLabel":"Ajouter un second produit à la page (optionnel)","lp.product2NoneOption":"— Aucun second produit —",
+    "lp.product2Hint":"Le client pourra l'ajouter à sa commande via une option supplémentaire dans le formulaire, à son propre prix.",
+    "lp.product2NameLabel":"Nom du second produit","lp.product2PriceLabel":"Prix du second produit (DH)","lp.product2ImageLabel":"Lien image du second produit",
+    "lp.mainContentTitle":"Contenu principal","lp.slugLabel":"Slug / URL","lp.statusLabel":"Statut","lp.languageLabel":"Langue",
+    "lp.kickerLabel":"Kicker","lp.titleLabel":"Titre","lp.subtitleLabel":"Sous-titre","lp.priceLabel":"Prix","lp.oldPriceLabel":"Ancien prix",
+    "lp.ctaLabel":"Texte bouton","lp.whatsappLabel":"WhatsApp (212...)","lp.descriptionLabel":"Description",
+    "lp.imagesTitle":"Images","lp.imagesHint":"Les images déjà utilisées par LUNÉA sont proposées automatiquement.","lp.imageChoiceDefault":"Ajouter une image LUNÉA…",
+    "lp.addImageBtn":"Ajouter","lp.imageUploadLabel":"Ou uploader une nouvelle image",
+    "lp.sectionsTitle":"Sections","lp.benefitsLabel":"Benefits (une ligne = un benefit)","lp.reviewsLabel":"Reviews (une ligne = un avis)","lp.faqLabel":"FAQ (format Question | Réponse, une ligne)",
+    "lp.toggleOrderForm":"Formulaire commande","lp.toggleWhatsapp":"WhatsApp","lp.toggleGallery":"Galerie","lp.toggleBenefits":"Benefits","lp.toggleReviews":"Reviews","lp.toggleFaq":"FAQ",
+    "lp.previewBtn":"Prévisualiser","lp.backBtn":"Retour","lp.diagTitle":"Diagnostic (Admin)",
+    "lp.diagHint":"Affiche ici ce qui s'est passé lors de la dernière tentative d'enregistrement : authentification / jeton / méthode / URL / statut / réponse. Aucune donnée secrète n'est affichée.",
+    "lp.listTitle":"Landing Pages","lp.newBtn":"+ Nouvelle","lp.editBtn":"Modifier","lp.openBtn":"Ouvrir","lp.deleteBtn":"Supprimer","lp.emptyState":"Aucune Landing Page. Créez la première.",
+    "lp.confirmDelete":"Supprimer cette Landing Page ?","lp.deletedToast":"Supprimée","lp.imageAddedToast":"Image ajoutée","lp.uploadError":"Erreur lors du téléversement",
+    "lp.savedToast":"Landing Page enregistrée","lp.slugTitleRequired":"Slug et titre obligatoires","lp.saveError":"Erreur de sauvegarde",
     "admin.field.stock":"Quantité disponible (stock)","admin.field.stockPlaceholder":"Illimité",
     "admin.field.packName":"Pack — Nom (Français)","admin.field.packNameAr":"Pack — Nom (Arabe)",
     "admin.field.packPieces":"Pack — Nombre de pièces",
@@ -745,9 +763,27 @@ const I18N = {
     "admin.images":"صور المنتج","admin.imgPrimary":"الصورة الرئيسية","admin.imgMoveUp":"نقل لليسار","admin.imgMoveDown":"نقل لليمين",
     "admin.imgSetPrimary":"تعيين كصورة رئيسية","admin.imgReplace":"استبدال","admin.imgDelete":"حذف","admin.imgAdd":"إضافة صورة",
     "admin.imgDeleteLastError":"لا يمكن حذف الصورة الوحيدة للمنتج.","admin.imgSaveError":"مساحة التخزين غير كافية في هذا المتصفح لحفظ هذه الصورة.",
-    "admin.field.video":"رابط الفيديو ديال المنتج (mp4)","admin.videoUploadLabel":"ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب",
-    "admin.videoUploading":"⏳ كيتلي...","admin.videoUploaded":"✅ تلا الفيديو — سيري ضغطي «حفظ» باش يبقى","admin.videoUploadToast":"تلا الفيديو، ماتنساش تضغط حفظ",
-    "lp.videoLabel":"رابط الفيديو (mp4) — كيبان قبل بوطون الطلب","lp.videoUploadLabel":"ولا حمّلي فيديو مباشرة من الهاتف/الحاسوب",
+    "admin.field.video":"رابط فيديو المنتج (mp4)","admin.videoUploadLabel":"تحميل فيديو من الجهاز",
+    "admin.videoUploading":"⏳ جارٍ الرفع...","admin.videoUploaded":"✅ تم رفع الفيديو — اضغط «حفظ» لتأكيد الحفظ","admin.videoUploadToast":"تم رفع الفيديو، لا تنسَ الضغط على حفظ",
+    "lp.videoLabel":"رابط الفيديو (mp4) — يظهر قبل زر الطلب","lp.videoUploadLabel":"تحميل فيديو من الجهاز",
+    "lp.editTitle":"تعديل صفحة الهبوط","lp.createTitle":"إنشاء صفحة هبوط","lp.statusHint":"مسودة ← معاينة ← نشر. الموقع الرئيسي يبقى منفصلاً.",
+    "lp.sourceTitle":"مصدر المنتج","lp.sourceSelectLabel":"اختيار منتج من الموقع","lp.sourceNewOption":"— منتج جديد / محتوى مخصص —",
+    "lp.sourceHint":"اختيار منتج ينسخ معلوماته إلى صفحة الهبوط. التعديلات على صفحة الهبوط تبقى مستقلة عن المنتج الأصلي.",
+    "lp.product2Title":"منتج ثانٍ (اختياري)","lp.product2SelectLabel":"إضافة منتج ثانٍ للصفحة (اختياري)","lp.product2NoneOption":"— بدون منتج ثانٍ —",
+    "lp.product2Hint":"يمكن للزبون إضافته إلى طلبه عبر خيار إضافي في نموذج الطلب، بسعره الخاص.",
+    "lp.product2NameLabel":"اسم المنتج الثاني","lp.product2PriceLabel":"سعر المنتج الثاني (درهم)","lp.product2ImageLabel":"رابط صورة المنتج الثاني",
+    "lp.mainContentTitle":"المحتوى الرئيسي","lp.slugLabel":"الرابط المختصر (Slug)","lp.statusLabel":"الحالة","lp.languageLabel":"اللغة",
+    "lp.kickerLabel":"عبارة علوية (Kicker)","lp.titleLabel":"العنوان","lp.subtitleLabel":"العنوان الفرعي","lp.priceLabel":"السعر","lp.oldPriceLabel":"السعر القديم",
+    "lp.ctaLabel":"نص الزر","lp.whatsappLabel":"واتساب (212...)","lp.descriptionLabel":"الوصف",
+    "lp.imagesTitle":"الصور","lp.imagesHint":"الصور المستعملة سابقاً في LUNÉA تُقترح تلقائياً.","lp.imageChoiceDefault":"إضافة صورة من LUNÉA…",
+    "lp.addImageBtn":"إضافة","lp.imageUploadLabel":"أو تحميل صورة جديدة",
+    "lp.sectionsTitle":"الأقسام","lp.benefitsLabel":"المميزات (سطر واحد لكل ميزة)","lp.reviewsLabel":"آراء العملاء (سطر واحد لكل رأي)","lp.faqLabel":"الأسئلة الشائعة (بصيغة: سؤال | جواب، سطر واحد لكل سؤال)",
+    "lp.toggleOrderForm":"نموذج الطلب","lp.toggleWhatsapp":"واتساب","lp.toggleGallery":"معرض الصور","lp.toggleBenefits":"المميزات","lp.toggleReviews":"آراء العملاء","lp.toggleFaq":"الأسئلة الشائعة",
+    "lp.previewBtn":"معاينة","lp.backBtn":"رجوع","lp.diagTitle":"تشخيص (للإدارة)",
+    "lp.diagHint":"يظهر هنا ما حدث في آخر محاولة حفظ: المصادقة / الرمز / الطريقة / الرابط / الحالة / الاستجابة. لا تُعرض أي بيانات سرّية.",
+    "lp.listTitle":"صفحات الهبوط","lp.newBtn":"+ جديدة","lp.editBtn":"تعديل","lp.openBtn":"فتح","lp.deleteBtn":"حذف","lp.emptyState":"لا توجد صفحات هبوط. أنشئ الأولى.",
+    "lp.confirmDelete":"هل تريد حذف صفحة الهبوط هذه؟","lp.deletedToast":"تم الحذف","lp.imageAddedToast":"تمت إضافة الصورة","lp.uploadError":"خطأ أثناء الرفع",
+    "lp.savedToast":"تم حفظ صفحة الهبوط","lp.slugTitleRequired":"الرابط المختصر والعنوان مطلوبان","lp.saveError":"خطأ في الحفظ",
     "admin.field.stock":"الكمية المتوفرة (المخزون)","admin.field.stockPlaceholder":"غير محدود",
     "admin.field.packName":"الباك — الاسم (بالفرنسية)","admin.field.packNameAr":"الباك — الاسم (بالعربية)",
     "admin.field.packPieces":"الباك — عدد القطع",
@@ -2190,50 +2226,50 @@ function landingEditorHTML(p){
     return `<option value="${escAttr(x.id)}" ${sourceProductId===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;
   }).join('');
   return `<div class="lp-admin">
-    <div class="admin-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="font-family:var(--font-display);font-size:30px">${p.id?'Modifier':'Créer'} Landing Page</h2><small>Draft → Preview → Publish. Le site principal reste séparé.</small></div><span class="lp-status">${escHtml(p.status)}</span></div></div>
-    <div class="admin-card"><h3 style="margin-bottom:16px">Source du produit</h3>
+    <div class="admin-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="font-family:var(--font-display);font-size:30px">${p.id?t("lp.editTitle"):t("lp.createTitle")}</h2><small>${t("lp.statusHint")}</small></div><span class="lp-status">${escHtml(p.status)}</span></div></div>
+    <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.sourceTitle")}</h3>
       <div class="lp-admin-grid">
-        <div class="full"><label>Choisir un produit du site</label><select id="lp-source-product"><option value="">— Nouveau produit / contenu personnalisé —</option>${productOptions}</select><small>Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.</small></div>
+        <div class="full"><label>${t("lp.sourceSelectLabel")}</label><select id="lp-source-product"><option value="">${t("lp.sourceNewOption")}</option>${productOptions}</select><small>${t("lp.sourceHint")}</small></div>
       </div>
     </div>
-    <div class="admin-card"><h3 style="margin-bottom:16px">منتج ثاني (اختياري)</h3>
+    <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.product2Title")}</h3>
       <div class="lp-admin-grid">
-        <div class="full"><label>زيدي منتج ثاني للصفحة (اختياري)</label><select id="lp-product2-source"><option value="">— بلا منتج ثاني —</option>${PRODUCTS.filter(x=>x.enabled!==false).map(x=>{const nfr=I18N.fr[x.nameKey]||x.id;return `<option value="${escAttr(x.id)}" ${p.product2Id===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;}).join('')}</select><small>الزبون غادي يقدر يزيدو لطلبه من زر إضافي فforumulaire الطلب، بثمنه الخاص بيه.</small></div>
-        <div><label>اسم المنتج الثاني</label><input id="lp-product2-name" value="${escAttr(p.product2Name||'')}"></div>
-        <div><label>ثمن المنتج الثاني (DH)</label><input id="lp-product2-price" value="${escAttr(p.product2Price||'')}"></div>
-        <div class="full"><label>رابط صورة المنتج الثاني</label><input id="lp-product2-image" value="${escAttr(p.product2Image||'')}" style="direction:ltr;text-align:left;"></div>
+        <div class="full"><label>${t("lp.product2SelectLabel")}</label><select id="lp-product2-source"><option value="">${t("lp.product2NoneOption")}</option>${PRODUCTS.filter(x=>x.enabled!==false).map(x=>{const nfr=I18N.fr[x.nameKey]||x.id;return `<option value="${escAttr(x.id)}" ${p.product2Id===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;}).join('')}</select><small>${t("lp.product2Hint")}</small></div>
+        <div><label>${t("lp.product2NameLabel")}</label><input id="lp-product2-name" value="${escAttr(p.product2Name||'')}"></div>
+        <div><label>${t("lp.product2PriceLabel")}</label><input id="lp-product2-price" value="${escAttr(p.product2Price||'')}"></div>
+        <div class="full"><label>${t("lp.product2ImageLabel")}</label><input id="lp-product2-image" value="${escAttr(p.product2Image||'')}" style="direction:ltr;text-align:left;"></div>
         <input type="hidden" id="lp-product2-id" value="${escAttr(p.product2Id||'')}">
       </div>
     </div>
-    <div class="admin-card"><h3 style="margin-bottom:16px">Contenu principal</h3><div class="lp-admin-grid">
-      <div><label>Slug / URL</label><input id="lp-slug" value="${escAttr(p.slug)}" placeholder="produit-x"></div>
-      <div><label>Statut</label><select id="lp-status"><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option><option value="published" ${p.status==='published'?'selected':''}>Published</option></select></div>
-      <div><label>Langue</label><select id="lp-language"><option value="fr" ${p.language==='fr'?'selected':''}>Français</option><option value="ar" ${p.language==='ar'?'selected':''}>العربية</option></select></div>
-      <div><label>Kicker</label><input id="lp-kicker" value="${escAttr(p.kicker)}"></div>
-      <div class="full"><label>Titre</label><input id="lp-title" value="${escAttr(p.title)}"></div>
-      <div class="full"><label>Sous-titre</label><textarea id="lp-subtitle" rows="2">${escHtml(p.subtitle)}</textarea></div>
-      <div><label>Prix</label><input id="lp-price" value="${escAttr(p.price)}"></div>
-      <div><label>Ancien prix</label><input id="lp-oldprice" value="${escAttr(p.oldPrice)}"></div>
-      <div><label>Texte bouton</label><input id="lp-cta" value="${escAttr(p.cta)}"></div>
-      <div><label>WhatsApp (212...)</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
+    <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.mainContentTitle")}</h3><div class="lp-admin-grid">
+      <div><label>${t("lp.slugLabel")}</label><input id="lp-slug" value="${escAttr(p.slug)}" placeholder="produit-x"></div>
+      <div><label>${t("lp.statusLabel")}</label><select id="lp-status"><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option><option value="published" ${p.status==='published'?'selected':''}>Published</option></select></div>
+      <div><label>${t("lp.languageLabel")}</label><select id="lp-language"><option value="fr" ${p.language==='fr'?'selected':''}>Français</option><option value="ar" ${p.language==='ar'?'selected':''}>العربية</option></select></div>
+      <div><label>${t("lp.kickerLabel")}</label><input id="lp-kicker" value="${escAttr(p.kicker)}"></div>
+      <div class="full"><label>${t("lp.titleLabel")}</label><input id="lp-title" value="${escAttr(p.title)}"></div>
+      <div class="full"><label>${t("lp.subtitleLabel")}</label><textarea id="lp-subtitle" rows="2">${escHtml(p.subtitle)}</textarea></div>
+      <div><label>${t("lp.priceLabel")}</label><input id="lp-price" value="${escAttr(p.price)}"></div>
+      <div><label>${t("lp.oldPriceLabel")}</label><input id="lp-oldprice" value="${escAttr(p.oldPrice)}"></div>
+      <div><label>${t("lp.ctaLabel")}</label><input id="lp-cta" value="${escAttr(p.cta)}"></div>
+      <div><label>${t("lp.whatsappLabel")}</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
       <div class="full"><label>${t("lp.videoLabel")}</label><input id="lp-video" value="${escAttr(p.video||'')}" placeholder="https://.../video.mp4" style="direction:ltr;text-align:left;"></div>
       <div class="full"><label>${t("lp.videoUploadLabel")}</label><input type="file" accept="video/*" id="lp-video-file"> <span id="lp-video-status" style="font-size:12px;color:var(--gold-soft);"></span></div>
-      <div class="full"><label>Description</label><textarea id="lp-description" rows="4">${escHtml(p.description)}</textarea></div>
+      <div class="full"><label>${t("lp.descriptionLabel")}</label><textarea id="lp-description" rows="4">${escHtml(p.description)}</textarea></div>
     </div></div>
-    <div class="admin-card"><h3>Images</h3><small>Les images déjà utilisées par LUNÉA sont proposées automatiquement.</small><div id="lp-images-list" style="margin-top:14px">${imgs.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join('')}</div>
-      <div style="margin-top:12px"><select id="lp-image-choice"><option value="">Ajouter une image LUNÉA…</option>${choices.map(u=>`<option value="${escAttr(u)}">${escAttr(u.slice(-55))}</option>`).join('')}</select> <button class="btn btn-ghost" id="lp-add-image">Ajouter</button></div>
-      <div style="margin-top:12px"><label>Ou uploader une nouvelle image</label><input type="file" id="lp-image-file" accept="image/*"></div>
+    <div class="admin-card"><h3>${t("lp.imagesTitle")}</h3><small>${t("lp.imagesHint")}</small><div id="lp-images-list" style="margin-top:14px">${imgs.map((u,i)=>`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`).join('')}</div>
+      <div style="margin-top:12px"><select id="lp-image-choice"><option value="">${t("lp.imageChoiceDefault")}</option>${choices.map(u=>`<option value="${escAttr(u)}">${escAttr(u.slice(-55))}</option>`).join('')}</select> <button class="btn btn-ghost" id="lp-add-image">${t("lp.addImageBtn")}</button></div>
+      <div style="margin-top:12px"><label>${t("lp.imageUploadLabel")}</label><input type="file" id="lp-image-file" accept="image/*"></div>
     </div>
-    <div class="admin-card"><h3>Sections</h3><div class="lp-admin-grid">
-      <div><label>Benefits (une ligne = un benefit)</label><textarea id="lp-benefits" rows="5">${escHtml(landingArrayText(p.benefits))}</textarea></div>
-      <div><label>Reviews (une ligne = un avis)</label><textarea id="lp-reviews" rows="5">${escHtml(landingArrayText(p.reviews))}</textarea></div>
-      <div><label>FAQ (format Question | Réponse, une ligne)</label><textarea id="lp-faq" rows="5">${escHtml((p.faqs||[]).map(x=>`${x.q||x.question||''} | ${x.a||x.answer||''}`).join('\n'))}</textarea></div>
+    <div class="admin-card"><h3>${t("lp.sectionsTitle")}</h3><div class="lp-admin-grid">
+      <div><label>${t("lp.benefitsLabel")}</label><textarea id="lp-benefits" rows="5">${escHtml(landingArrayText(p.benefits))}</textarea></div>
+      <div><label>${t("lp.reviewsLabel")}</label><textarea id="lp-reviews" rows="5">${escHtml(landingArrayText(p.reviews))}</textarea></div>
+      <div><label>${t("lp.faqLabel")}</label><textarea id="lp-faq" rows="5">${escHtml((p.faqs||[]).map(x=>`${x.q||x.question||''} | ${x.a||x.answer||''}`).join('\n'))}</textarea></div>
     </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px">
-      ${[['lp-show-form','showOrderForm','Formulaire commande'],['lp-show-wa','showWhatsapp','WhatsApp'],['lp-show-gallery','showGallery','Galerie'],['lp-show-benefits','showBenefits','Benefits'],['lp-show-reviews','showReviews','Reviews'],['lp-show-faq','showFaq','FAQ']].map(([id,k,label])=>`<label style="display:flex;align-items:center;gap:8px;color:var(--ivory)"><input type="checkbox" id="${id}" ${p[k]!==false?'checked':''} style="width:auto"> ${label}</label>`).join('')}
+      ${[['lp-show-form','showOrderForm','lp.toggleOrderForm'],['lp-show-wa','showWhatsapp','lp.toggleWhatsapp'],['lp-show-gallery','showGallery','lp.toggleGallery'],['lp-show-benefits','showBenefits','lp.toggleBenefits'],['lp-show-reviews','showReviews','lp.toggleReviews'],['lp-show-faq','showFaq','lp.toggleFaq']].map(([id,k,labelKey])=>`<label style="display:flex;align-items:center;gap:8px;color:var(--ivory)"><input type="checkbox" id="${id}" ${p[k]!==false?'checked':''} style="width:auto"> ${t(labelKey)}</label>`).join('')}
     </div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-primary" id="lp-save">Enregistrer</button><button class="btn btn-ghost" id="lp-preview">Prévisualiser</button><button class="btn btn-ghost" id="lp-back">Retour</button></div>
-    <div class="admin-card"><h3 style="margin-bottom:10px">Diagnostic (Admin)</h3>
-      <p style="color:var(--ivory-dim);font-size:12px;margin-bottom:12px">كيبان هنا شنو وقع فآخر محاولة "Enregistrer": isAdminAuthenticated / getAdminToken / method / URL / status / response. ما فيه حتى secret.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-primary" id="lp-save">${t("admin.save")}</button><button class="btn btn-ghost" id="lp-preview">${t("lp.previewBtn")}</button><button class="btn btn-ghost" id="lp-back">${t("lp.backBtn")}</button></div>
+    <div class="admin-card"><h3 style="margin-bottom:10px">${t("lp.diagTitle")}</h3>
+      <p style="color:var(--ivory-dim);font-size:12px;margin-bottom:12px">${t("lp.diagHint")}</p>
       <pre id="lpDiagLog" dir="ltr" style="background:#00000066;border:1px solid var(--line);padding:14px;border-radius:10px;font-size:11px;line-height:1.6;max-height:280px;overflow:auto;white-space:pre-wrap;word-break:break-all;text-align:left;color:#c9ffb0;font-family:monospace"></pre>
     </div>
   </div>`;
@@ -2268,12 +2304,12 @@ async function renderAdminLandingPages(){
     const p=LANDING_EDIT_ID==='__new__'?{...landingDefaults(),id:'__new__'}:landingNormalize(rows.find(x=>x.id===LANDING_EDIT_ID)||{}); p.id=LANDING_EDIT_ID;
     document.getElementById('adminWrap').innerHTML=adminLanguageSwitcherHTML()+adminTabsHTML('landing')+landingEditorHTML(p); bindAdminTabs(); bindLandingEditor(); return;
   }
-  let html=adminLanguageSwitcherHTML()+adminTabsHTML('landing')+`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px"><h2 style="font-family:var(--font-display);font-size:28px">Landing Pages</h2><div><button class="btn btn-primary" id="lp-new">+ Nouvelle</button> <button class="btn btn-ghost" id="adminLogoutBtn">${t('admin.logout')}</button></div></div>`;
-  html+=rows.length?rows.map(p=>`<div class="admin-order"><div class="admin-order-head"><div><b>${escHtml(p.title||p.slug)}</b> — /p/${escHtml(p.slug)}</div><span class="admin-status">${escHtml(p.status)}</span></div><div class="admin-order-body open"><div class="row"><span>${escHtml(p.subtitle||'')}</span><span>${escHtml(p.price||'')}</span></div><div style="margin-top:14px"><button class="btn btn-primary" data-lp-edit="${escAttr(p.id)}">Modifier</button> <a class="btn btn-ghost" href="?landing=${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">Ouvrir</a> <button class="btn btn-ghost" data-lp-delete="${escAttr(p.id)}">Supprimer</button></div></div></div>`).join(''):`<p style="color:var(--ivory-dim)">Aucune Landing Page. Crée la première.</p>`;
+  let html=adminLanguageSwitcherHTML()+adminTabsHTML('landing')+`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px"><h2 style="font-family:var(--font-display);font-size:28px">${t("lp.listTitle")}</h2><div><button class="btn btn-primary" id="lp-new">${t("lp.newBtn")}</button> <button class="btn btn-ghost" id="adminLogoutBtn">${t('admin.logout')}</button></div></div>`;
+  html+=rows.length?rows.map(p=>`<div class="admin-order"><div class="admin-order-head"><div><b>${escHtml(p.title||p.slug)}</b> — /p/${escHtml(p.slug)}</div><span class="admin-status">${escHtml(p.status)}</span></div><div class="admin-order-body open"><div class="row"><span>${escHtml(p.subtitle||'')}</span><span>${escHtml(p.price||'')}</span></div><div style="margin-top:14px"><button class="btn btn-primary" data-lp-edit="${escAttr(p.id)}">${t("lp.editBtn")}</button> <a class="btn btn-ghost" href="?landing=${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${t("lp.openBtn")}</a> <button class="btn btn-ghost" data-lp-delete="${escAttr(p.id)}">${t("lp.deleteBtn")}</button></div></div></div>`).join(''):`<p style="color:var(--ivory-dim)">${t("lp.emptyState")}</p>`;
   document.getElementById('adminWrap').innerHTML=html; bindAdminTabs();
   document.getElementById('adminLogoutBtn')?.addEventListener('click',signOutAdmin); document.getElementById('lp-new')?.addEventListener('click',()=>{LANDING_EDIT_ID='__new__';LANDING_PAGES.push({...landingDefaults(),id:'__new__'});renderAdminLandingPages();});
   document.querySelectorAll('[data-lp-edit]').forEach(b=>b.addEventListener('click',()=>{LANDING_EDIT_ID=b.dataset.lpEdit;renderAdminLandingPages();}));
-  document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Supprimer cette Landing Page ?'))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast('Supprimée');await renderAdminLandingPages();}catch(e){showToast(e?.message||'Erreur');}}));
+  document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm(t("lp.confirmDelete")))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast(t("lp.deletedToast"));await renderAdminLandingPages();}catch(e){showToast(e?.message||t("admin.backendWriteError"));}}));
 }
 function bindLandingEditor(){
   document.getElementById('lp-source-product')?.addEventListener('change',()=>{
@@ -2303,7 +2339,7 @@ function bindLandingEditor(){
   });
   document.getElementById('lp-back')?.addEventListener('click',()=>{LANDING_EDIT_ID=null;renderAdminLandingPages();});
   document.getElementById('lp-add-image')?.addEventListener('click',()=>{const u=document.getElementById('lp-image-choice').value;if(!u)return;const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();});
-  document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast('Image ajoutée');}catch(err){showToast(err?.message||'Upload error');}});
+  document.getElementById('lp-image-file')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());const u=await uploadProductImageToStorage(f,'landing-'+slug);const list=document.getElementById('lp-images-list');const i=list.querySelectorAll('[data-lpimg]').length;list.insertAdjacentHTML('beforeend',`<div class="lp-image-row"><img src="${escAttr(u)}"><input value="${escAttr(u)}" data-lpimg="${i}"><button class="btn btn-ghost" data-remove-lpimg="${i}">✕</button></div>`);bindLandingImageRemove();showToast(t("lp.imageAddedToast"));}catch(err){showToast(err?.message||t("lp.uploadError"));}});
   document.getElementById('lp-video-file')?.addEventListener('change',async e=>{
     const f=e.target.files?.[0]; if(!f)return;
     const statusEl=document.getElementById('lp-video-status');
@@ -2318,12 +2354,12 @@ function bindLandingEditor(){
     }catch(err){
       console.error(err);
       if(statusEl) statusEl.textContent="";
-      showToast(err?.message||'Upload error');
+      showToast(err?.message||t("lp.uploadError"));
     }
     e.target.value="";
   });
   bindLandingImageRemove();
-  document.getElementById('lp-save')?.addEventListener('click',async()=>{const b=document.getElementById('lp-save');diagClear('lpDiagLog');lpDiagAppend('lp-save click received — starting saveLandingPage()');b.disabled=true;try{const p=collectLandingForm();if(!p.slug||!p.title)throw new Error('Slug et titre obligatoires');const saved=await saveLandingPage(p,lpDiagAppend);lpDiagAppend('DONE: saved successfully');LANDING_PAGES=LANDING_PAGES.filter(x=>x.id!==LANDING_EDIT_ID);LANDING_PAGES.unshift(saved);LANDING_EDIT_ID=null;showToast('Landing Page enregistrée');await renderAdminLandingPages();}catch(e){lpDiagAppend(`DONE: threw error -> ${e?.message||e}`);console.error(e);showToast(e?.message||'Erreur de sauvegarde');}finally{b.disabled=false;}});
+  document.getElementById('lp-save')?.addEventListener('click',async()=>{const b=document.getElementById('lp-save');diagClear('lpDiagLog');lpDiagAppend('lp-save click received — starting saveLandingPage()');b.disabled=true;try{const p=collectLandingForm();if(!p.slug||!p.title)throw new Error(t("lp.slugTitleRequired"));const saved=await saveLandingPage(p,lpDiagAppend);lpDiagAppend('DONE: saved successfully');LANDING_PAGES=LANDING_PAGES.filter(x=>x.id!==LANDING_EDIT_ID);LANDING_PAGES.unshift(saved);LANDING_EDIT_ID=null;showToast(t("lp.savedToast"));await renderAdminLandingPages();}catch(e){lpDiagAppend(`DONE: threw error -> ${e?.message||e}`);console.error(e);showToast(e?.message||t("lp.saveError"));}finally{b.disabled=false;}});
   document.getElementById('lp-preview')?.addEventListener('click',()=>{const p=collectLandingForm();localStorage.setItem('lunea_lp_preview',JSON.stringify(p));window.open('/p/preview','_blank');});
 }
 function bindLandingImageRemove(){document.querySelectorAll('[data-remove-lpimg]').forEach(b=>b.onclick=()=>b.closest('.lp-image-row')?.remove());}
