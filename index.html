@@ -3297,7 +3297,7 @@ function bindProductImageEvents(){
 /* ============================================================
    INIT
    ============================================================ */
-(async function initLunea(){
+const luneaInitPromise = (async function initLunea(){
   await loadSiteSettings();
   await loadProductsFromSupabase();
   applyProductOverrides();
@@ -3308,7 +3308,12 @@ function bindProductImageEvents(){
   updateCartBadge();
   applySiteBackground();
 })();
-window.addEventListener("DOMContentLoaded",()=>{ bootLandingRoute(); });
+/* bootLandingRoute() renders a landing page by replacing document.body.
+   It must wait for initLunea() to finish loading products/variants first,
+   otherwise a landing page opened right after a product's colors/sizes
+   were added in admin can render before that data has arrived, showing
+   the product with quantity only and no color/size picker. */
+window.addEventListener("DOMContentLoaded",()=>{ luneaInitPromise.then(()=> bootLandingRoute()); });
 </script>
 
 <script>
