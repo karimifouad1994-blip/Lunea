@@ -281,6 +281,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-gallery img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:18px;border:1px solid var(--line)}
 .lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
+.lp-choose-btn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--gold-soft);background:transparent;color:var(--gold-soft);font-size:13.5px;font-weight:500;cursor:pointer;}
 .lp-review{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:12px}
 .lp-faq details{border-bottom:1px solid var(--line);padding:16px 0}.lp-faq summary{cursor:pointer;font-weight:500}
 .lp-order{max-width:620px;margin:0 auto;background:#ffffff08;border:1px solid var(--line);border-radius:22px;padding:24px}
@@ -2421,33 +2422,47 @@ function renderLandingPublic(p, isPreview){
   const pick=(base)=>{ const key=base+(lang==='ar'?'Ar':'Fr'); return (p[key]!=null && p[key]!=='') ? p[key] : (p[base]||''); };
   const pickArr=(base)=>{ const key=base+(lang==='ar'?'Ar':'Fr'); return (p[key]&&p[key].length) ? p[key] : (p[base]||[]); };
 
-  /* Color/size picker: only shown when this landing page was built from a real
-     product (p.sourceProductId) that has variants configured. Without this,
-     the order form had no way for the customer to choose a color/size. */
-  const variants = p.sourceProductId ? PRODUCT_VARIANTS[p.sourceProductId] : null;
-  const packPieces = variants ? getPackPieces(p.sourceProductId) : 0;
-  const hasColors = !!(variants && variants.colors && variants.colors.length);
-  const hasSizes = !!(variants && variants.sizes && variants.sizes.length);
-  let selColor=null, selColors=Array(packPieces).fill(null), selSize=null;
-  const variantColorLabel=(colorId)=>{ const c=(variants&&variants.colors||[]).find(x=>x.id===colorId); return c ? ((lang==='ar'?c.ar:c.fr)||c.fr||c.id) : (colorId||''); };
+  /* Each product (main + optional product2) gets its own color/size picker,
+     tied to its own variants, hidden until that product's own "Choisir"
+     trigger is opened -- instead of one picker shared for everything. */
+  const mainVariants = p.sourceProductId ? PRODUCT_VARIANTS[p.sourceProductId] : null;
+  const mainPack = mainVariants ? getPackPieces(p.sourceProductId) : 0;
+  const mainHasColors = !!(mainVariants && mainVariants.colors && mainVariants.colors.length);
+  const mainHasSizes = !!(mainVariants && mainVariants.sizes && mainVariants.sizes.length);
+  const mainHasVariants = mainHasColors || mainHasSizes;
+  const mainState = { color:null, colors:Array(mainPack).fill(null), size:null };
+  let mainOpen=false, mainAdded=false;
 
-  function variantPickerHTML(){
-    if(!variants || !(hasColors||hasSizes)) return '';
+  const p2Variants = p.product2Id ? PRODUCT_VARIANTS[p.product2Id] : null;
+  const p2Pack = p2Variants ? getPackPieces(p.product2Id) : 0;
+  const p2HasColors = !!(p2Variants && p2Variants.colors && p2Variants.colors.length);
+  const p2HasSizes = !!(p2Variants && p2Variants.sizes && p2Variants.sizes.length);
+  const p2HasVariants = p2HasColors || p2HasSizes;
+  const p2State = { color:null, colors:Array(p2Pack).fill(null), size:null };
+  let p2Checked=false, p2Added=false;
+
+  let showForm=false;
+
+  const labelFor=(variants,id)=>{ const c=(variants&&variants.colors||[]).find(x=>x.id===id); return c ? ((lang==='ar'?c.ar:c.fr)||c.fr||c.id) : (id||''); };
+  const isReady=(hasColors,pack,hasSizes,state)=>{
+    const colorOk = pack>1 ? (state.colors.length===pack && state.colors.every(Boolean)) : (!hasColors || !!state.color);
+    const sizeOk = !hasSizes || !!state.size;
+    return colorOk && sizeOk;
+  };
+  const summaryText=(variants,hasColors,pack,hasSizes,state)=>{
+    const colorTxt = pack>1 ? state.colors.map(id=>labelFor(variants,id)).filter(Boolean).join(' + ') : (state.color?labelFor(variants,state.color):'');
+    const parts=[colorTxt, state.size].filter(Boolean);
+    return parts.join(' / ');
+  };
+  function pickerInner(ns, variants, pack, hasColors, hasSizes, state){
     let colorHTML='';
-    if(packPieces>1 && hasColors){
-      colorHTML=Array.from({length:packPieces},(_,idx)=>`<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">${lang==='ar'?'اللون':'Couleur'} ${idx+1}</label><div style="display:flex;flex-wrap:wrap;gap:8px">${variants.colors.map(c=>`<button type="button" class="pill ${selColors[idx]===c.id?'selected':''}" data-pack-color="${idx}:${c.id}">${escHtml(lang==='ar'?c.ar:c.fr)}</button>`).join('')}</div></div>`).join('');
+    if(pack>1 && hasColors){
+      colorHTML=Array.from({length:pack},(_,idx)=>`<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">${lang==='ar'?'اللون':'Couleur'} ${idx+1}</label><div style="display:flex;flex-wrap:wrap;gap:8px">${variants.colors.map(c=>`<button type="button" class="pill ${state.colors[idx]===c.id?'selected':''}" data-ns="${ns}" data-pack-color="${idx}:${c.id}">${escHtml(lang==='ar'?c.ar:c.fr)}</button>`).join('')}</div></div>`).join('');
     }else if(hasColors){
-      colorHTML=`<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">${lang==='ar'?'اللون':'Couleur'}</label><div style="display:flex;flex-wrap:wrap;gap:8px">${variants.colors.map(c=>`<button type="button" class="pill ${selColor===c.id?'selected':''}" data-color="${c.id}">${escHtml(lang==='ar'?c.ar:c.fr)}</button>`).join('')}</div></div>`;
+      colorHTML=`<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">${lang==='ar'?'اللون':'Couleur'}</label><div style="display:flex;flex-wrap:wrap;gap:8px">${variants.colors.map(c=>`<button type="button" class="pill ${state.color===c.id?'selected':''}" data-ns="${ns}" data-color="${c.id}">${escHtml(lang==='ar'?c.ar:c.fr)}</button>`).join('')}</div></div>`;
     }
-    const sizeHTML = hasSizes ? `<div><label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">${lang==='ar'?'المقاس':'Taille'}</label><div style="display:flex;flex-wrap:wrap;gap:8px">${variants.sizes.map(s=>`<button type="button" class="pill ${selSize===s?'selected':''}" data-size="${escAttr(s)}">${escHtml(s)}</button>`).join('')}</div></div>` : '';
-    return `<div class="lp-field" id="lp-variant-block">${colorHTML}${sizeHTML}</div>`;
-  }
-  function bindVariantPicker(){
-    const block=document.getElementById('lp-variant-block'); if(!block) return;
-    const refresh=()=>{ block.outerHTML=variantPickerHTML(); bindVariantPicker(); };
-    block.querySelectorAll('[data-pack-color]').forEach(btn=>btn.addEventListener('click',()=>{ const [i,cid]=btn.dataset.packColor.split(':'); selColors[Number(i)]=cid; refresh(); }));
-    block.querySelectorAll('[data-color]').forEach(btn=>btn.addEventListener('click',()=>{ selColor=btn.dataset.color; refresh(); }));
-    block.querySelectorAll('[data-size]').forEach(btn=>btn.addEventListener('click',()=>{ selSize=btn.dataset.size; refresh(); }));
+    const sizeHTML = hasSizes ? `<div><label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">${lang==='ar'?'المقاس':'Taille'}</label><div style="display:flex;flex-wrap:wrap;gap:8px">${variants.sizes.map(s=>`<button type="button" class="pill ${state.size===s?'selected':''}" data-ns="${ns}" data-size="${escAttr(s)}">${escHtml(s)}</button>`).join('')}</div></div>` : '';
+    return `${colorHTML}${sizeHTML}`;
   }
 
   function paint(){
@@ -2460,7 +2475,64 @@ function renderLandingPublic(p, isPreview){
     const faqs=pickArr('faqs').map(x=>`<details><summary>${escHtml(x.q||'')}</summary><p style="padding-top:8px;color:var(--ivory-dim)">${escHtml(x.a||'')}</p></details>`).join('');
     const gallery=(p.gallery||[]).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(title)}">`).join('');
     const p2price=Number(String(p.product2Price||'0').replace(/[^0-9.]/g,''))||0;
-    const product2Block = (product2Name && p2price) ? `<section class="lp-section"><h2>${lang==='ar'?'اقتراح إضافي':'Offre complémentaire'}</h2><div class="lp-card" style="max-width:420px;margin:0 auto;text-align:center;padding:20px;">${p.product2Image?`<img src="${escAttr(p.product2Image)}" alt="${escAttr(product2Name)}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:14px;">`:''}<div style="font-family:var(--font-display);font-size:20px;margin-bottom:6px;">${escHtml(product2Name)}</div><div class="lp-price" style="font-size:20px;">${p2price} DH</div></div></section>` : '';
+    const product2ShowcaseBlock = (product2Name && p2price) ? `<section class="lp-section"><h2>${lang==='ar'?'اقتراح إضافي':'Offre complémentaire'}</h2><div class="lp-card" style="max-width:420px;margin:0 auto;text-align:center;padding:20px;">${p.product2Image?`<img src="${escAttr(p.product2Image)}" alt="${escAttr(product2Name)}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:14px;">`:''}<div style="font-family:var(--font-display);font-size:20px;margin-bottom:6px;">${escHtml(product2Name)}</div><div class="lp-price" style="font-size:20px;">${p2price} DH</div></div></section>` : '';
+
+    const mainPrice=Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0;
+    const mainVariantReady = !mainHasVariants || isReady(mainHasColors, mainPack, mainHasSizes, mainState);
+    const p2VariantReady = !p2HasVariants || isReady(p2HasColors, p2Pack, p2HasSizes, p2State);
+    const total = mainPrice + (p2Added ? p2price : 0);
+
+    /* ---- Main product order card ---- */
+    let mainActionHTML;
+    if(mainAdded){
+      mainActionHTML = `<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="color:var(--gold-soft);font-size:13.5px;">✓ ${lang==='ar'?'زيدات لسلة الطلب':'Ajouté au panier'}</span><button type="button" id="lp-main-edit" style="background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:12.5px;cursor:pointer;">${lang==='ar'?'تبديل':'Modifier'}</button></div>`;
+    } else if(!mainHasVariants){
+      mainActionHTML = `<button type="button" id="lp-main-add" class="lp-choose-btn">${lang==='ar'?'أضيفي للسلة':'Ajouter au panier'}</button>`;
+    } else if(mainOpen){
+      mainActionHTML = `<div id="lp-main-picker" style="margin-top:12px">${pickerInner('main',mainVariants,mainPack,mainHasColors,mainHasSizes,mainState)}</div><button type="button" id="lp-main-add" class="lp-choose-btn" ${mainVariantReady?'':'disabled style="opacity:.45;cursor:not-allowed;"'}>${lang==='ar'?'أضيفي للسلة':'Ajouter au panier'}</button>`;
+    } else {
+      mainActionHTML = `<button type="button" id="lp-main-toggle" class="lp-choose-btn">${lang==='ar'?'اختاري المقاس واللون':'Choisir taille & couleur'}</button>`;
+    }
+    const mainCardHTML=`<div class="lp-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;"><b style="font-family:var(--font-display);font-size:18px">${escHtml(title)}</b><span class="lp-price" style="font-size:16px">${mainPrice} DH</span></div>
+      ${mainActionHTML}
+    </div>`;
+
+    /* ---- Optional product2 order card ---- */
+    let p2ActionHTML='';
+    if(p2Checked){
+      if(p2Added){
+        p2ActionHTML = `<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="color:var(--gold-soft);font-size:13.5px;">✓ ${lang==='ar'?'زيدات لسلة الطلب':'Ajouté au panier'}</span><button type="button" id="lp-p2-edit" style="background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:12.5px;cursor:pointer;">${lang==='ar'?'تبديل':'Modifier'}</button></div>`;
+      } else {
+        const picker = p2HasVariants ? `<div id="lp-p2-picker" style="margin-top:12px">${pickerInner('p2',p2Variants,p2Pack,p2HasColors,p2HasSizes,p2State)}</div>` : '';
+        p2ActionHTML = `${picker}<button type="button" id="lp-p2-add" class="lp-choose-btn" ${p2VariantReady?'':'disabled style="opacity:.45;cursor:not-allowed;"'}>${lang==='ar'?'أضيفي للسلة':'Ajouter au panier'}</button>`;
+      }
+    }
+    const p2CardHTML = (product2Name && p2price) ? `<div class="lp-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="lp-p2-toggle" ${p2Checked?'checked':''} style="width:auto;">
+        <span style="flex:1">${escHtml(product2Name)}</span>
+        <span class="lp-price" style="font-size:16px">+${p2price} DH</span>
+      </label>
+      ${p2ActionHTML}
+    </div>` : '';
+
+    /* ---- Cart summary + confirm step ---- */
+    const summaryLines = [
+      mainAdded ? `<div class="row"><span>${escHtml(title)}${mainHasVariants?` — ${escHtml(summaryText(mainVariants,mainHasColors,mainPack,mainHasSizes,mainState))}`:''}</span><span>${mainPrice} DH</span></div>` : `<div class="row"><span style="color:var(--ivory-dim)">${escHtml(title)} — ${lang==='ar'?'لم تتم إضافتها بعد':'pas encore ajoutée'}</span><span>—</span></div>`,
+      p2Added ? `<div class="row"><span>${escHtml(product2Name)} — ${escHtml(summaryText(p2Variants,p2HasColors,p2Pack,p2HasSizes,p2State))}</span><span>${p2price} DH</span></div>` : ''
+    ].filter(Boolean).join('');
+    const summaryBlock = `<div class="lp-card" style="padding:18px;margin-bottom:14px;">
+      <div style="font-family:var(--font-display);font-size:16px;margin-bottom:10px;">${lang==='ar'?'طلبك':'Votre commande'}</div>
+      ${summaryLines}
+      <div class="row total" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--line);"><span>${lang==='ar'?'المجموع':'Total'}</span><span>${total} DH</span></div>
+    </div>`;
+
+    const confirmBlock = mainAdded
+      ? (showForm ? '' : `<button type="button" id="lp-confirm-btn" class="lp-cta" style="width:100%;text-align:center;border:none;cursor:pointer;">${lang==='ar'?'تأكيد الطلب':'Confirmer votre commande'}</button>`)
+      : `<p style="text-align:center;font-size:13px;color:var(--ivory-dim)">${lang==='ar'?'زيدي المنتج الرئيسي لسلتك باش تكملي':'Ajoutez le produit principal au panier pour continuer'}</p>`;
+
+    const formHTML = showForm ? `<form class="lp-order" id="lp-order-form" style="margin-top:16px"><div class="lp-field"><label>${lang==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${lang==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${lang==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${lang==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div><button class="lp-submit" type="submit">${escHtml(cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form>` : '';
 
     const sideOpp = dir==='rtl' ? 'left' : 'right';
     const sideSame = dir==='rtl' ? 'right' : 'left';
@@ -2470,10 +2542,9 @@ function renderLandingPublic(p, isPreview){
     </div>`;
     const closeBtnHTML = isPreview ? `<button type="button" id="lp-preview-close" title="${lang==='ar'?'رجوع للتعديل':"Retour à l'édition"}" style="position:fixed;top:14px;${sideSame}:14px;z-index:900;width:38px;height:38px;border-radius:50%;background:#1c0f16cc;backdrop-filter:blur(10px);border:1px solid #ffffff33;color:#f8f1e8;font-size:15px;display:flex;align-items:center;justify-content:center;">✖️</button>` : '';
 
-    document.body.innerHTML=`${closeBtnHTML}${langSwitchHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(cta)}</a></div></section><div class="lp-wrap">${description?`<section class="lp-section"><h2>${lang==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${lang==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${lang==='ar'?'فيديو':'Vidéo'}</h2><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}${product2Block}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${lang==='ar'?'الطلب':'Commander'}</h2><form class="lp-order" id="lp-order-form"><div class="lp-field"><label>${lang==='ar'?'الاسم':'Nom'}</label><input name="name" required></div><div class="lp-field"><label>${lang==='ar'?'الهاتف':'Téléphone'}</label><input name="phone" required></div><div class="lp-field"><label>${lang==='ar'?'المدينة':'Ville'}</label><input name="city" required></div><div class="lp-field"><label>${lang==='ar'?'العنوان':'Adresse'}</label><textarea name="address" rows="3" required></textarea></div>${variantPickerHTML()}${(product2Name&&p2price)?`<label class="lp-field" style="display:flex;align-items:center;gap:10px;flex-direction:row;"><input type="checkbox" id="lp-add-product2" style="width:auto;"> <span>${lang==='ar'?`أضيفي معها ${escHtml(product2Name)} (+${p2price} DH)`:`Ajouter aussi ${escHtml(product2Name)} (+${p2price} DH)`}</span></label>`:''}<button class="lp-submit" type="submit">${escHtml(cta)}</button><p id="lp-order-msg" style="margin-top:12px;text-align:center;color:var(--gold-soft)"></p></form></section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+    document.body.innerHTML=`${closeBtnHTML}${langSwitchHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)} ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}<a class="lp-cta" href="#order">${escHtml(cta)}</a></div></section><div class="lp-wrap">${description?`<section class="lp-section"><h2>${lang==='ar'?'التفاصيل':'À propos'}</h2><p style="max-width:760px;margin:auto;text-align:center;color:var(--ivory-dim);font-size:18px">${escHtml(description)}</p></section>`:''}${p.showGallery&&gallery?`<section class="lp-section"><h2>${lang==='ar'?'الصور':'Galerie'}</h2><div class="lp-gallery">${gallery}</div></section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><h2>${lang==='ar'?'فيديو':'Vidéo'}</h2><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}${product2ShowcaseBlock}${p.showOrderForm?`<section class="lp-section" id="order"><h2>${lang==='ar'?'الطلب':'Commander'}</h2>${mainCardHTML}${p2CardHTML}${summaryBlock}${confirmBlock}${formHTML}</section>`:''}</div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
 
     document.querySelectorAll('[data-lp-lang]').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.lpLang!==lang){ lang=b.dataset.lpLang; paint(); } }));
-    bindVariantPicker();
     document.getElementById('lp-preview-close')?.addEventListener('click',()=>{
       window.close();
       /* window.close() only works on tabs opened via script (e.g. the admin's
@@ -2481,23 +2552,34 @@ function renderLandingPublic(p, isPreview){
          user), fall back to going back in history. */
       setTimeout(()=>{ if(!window.closed){ history.length>1?history.back():location.href='/'; } },150);
     });
+    document.getElementById('lp-main-toggle')?.addEventListener('click',()=>{ mainOpen=true; paint(); });
+    document.getElementById('lp-main-add')?.addEventListener('click',()=>{ if(!mainVariantReady) return; mainAdded=true; paint(); });
+    document.getElementById('lp-main-edit')?.addEventListener('click',()=>{ mainAdded=false; mainOpen=true; paint(); });
+    document.getElementById('lp-p2-toggle')?.addEventListener('change',e=>{ p2Checked=e.target.checked; if(!p2Checked) p2Added=false; paint(); });
+    document.getElementById('lp-p2-add')?.addEventListener('click',()=>{ if(!p2VariantReady) return; p2Added=true; paint(); });
+    document.getElementById('lp-p2-edit')?.addEventListener('click',()=>{ p2Added=false; paint(); });
+    document.querySelectorAll('[data-pack-color]').forEach(btn=>btn.addEventListener('click',()=>{
+      const [idx,cid]=btn.dataset.packColor.split(':'); const st=btn.dataset.ns==='main'?mainState:p2State; st.colors[Number(idx)]=cid; paint();
+    }));
+    document.querySelectorAll('[data-color]').forEach(btn=>btn.addEventListener('click',()=>{
+      const st=btn.dataset.ns==='main'?mainState:p2State; st.color=btn.dataset.color; paint();
+    }));
+    document.querySelectorAll('[data-size]').forEach(btn=>btn.addEventListener('click',()=>{
+      const st=btn.dataset.ns==='main'?mainState:p2State; st.size=btn.dataset.size; paint();
+    }));
+    document.getElementById('lp-confirm-btn')?.addEventListener('click',()=>{
+      showForm=true; paint();
+      setTimeout(()=>{ document.getElementById('lp-order-form')?.scrollIntoView({behavior:'smooth',block:'center'}); },50);
+    });
     document.getElementById('lp-order-form')?.addEventListener('submit',async e=>{
       e.preventDefault();
       const f=new FormData(e.target);
       const submitBtn=e.target.querySelector('.lp-submit');
       const msgEl=document.getElementById('lp-order-msg');
       const name=f.get('name'), phone=f.get('phone'), city=f.get('city'), address=f.get('address');
-      if(variants && (hasColors||packPieces>1)){
-        const missingColor = packPieces>1 ? selColors.some(c=>!c) : !selColor;
-        if(missingColor){ if(msgEl) msgEl.textContent=lang==='ar'?'خاصك تختار اللون':'Merci de choisir la couleur'; return; }
-      }
-      if(variants && hasSizes && !selSize){ if(msgEl) msgEl.textContent=lang==='ar'?'خاصك تختار المقاس':'Merci de choisir la taille'; return; }
-      const colorText = packPieces>1 ? selColors.map(variantColorLabel).join(' + ') : (selColor?variantColorLabel(selColor):'');
-      const addProduct2 = document.getElementById('lp-add-product2')?.checked && product2Name && p2price;
-      const mainPrice=Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0;
-      const items=[{name:title, color:colorText, size:selSize||'', qty:1, price:mainPrice}];
-      if(addProduct2) items.push({name:product2Name, color:'', size:'', qty:1, price:p2price});
-      const total = mainPrice + (addProduct2 ? p2price : 0);
+      const mainColorText = summaryText(mainVariants,mainHasColors,mainPack,mainHasSizes,mainState);
+      const items=[{name:title, color: mainPack>1 ? mainState.colors.map(id=>labelFor(mainVariants,id)).join(' + ') : (mainState.color?labelFor(mainVariants,mainState.color):''), size:mainState.size||'', qty:1, price:mainPrice}];
+      if(p2Added) items.push({name:product2Name, color: p2Pack>1 ? p2State.colors.map(id=>labelFor(p2Variants,id)).join(' + ') : (p2State.color?labelFor(p2Variants,p2State.color):''), size:p2State.size||'', qty:1, price:p2price});
       const order={
         id:'LP-'+Date.now().toString(36).toUpperCase(),
         date:new Date().toISOString(),
@@ -2515,10 +2597,10 @@ function renderLandingPublic(p, isPreview){
         if(msgEl) msgEl.textContent=lang==='ar'?'تعذر تسجيل الطلب، حاول مرة أخرى':'Erreur, veuillez réessayer';
         return;
       }
-      const productsText = addProduct2
+      const productsText = p2Added
         ? (lang==='ar'?`${title} و${product2Name}`:`${title} et ${product2Name}`)
         : title;
-      const variantText = (colorText||selSize) ? (lang==='ar'? ` (${[colorText&&`اللون: ${colorText}`,selSize&&`المقاس: ${selSize}`].filter(Boolean).join('، ')})` : ` (${[colorText&&`Couleur: ${colorText}`,selSize&&`Taille: ${selSize}`].filter(Boolean).join(', ')})`) : '';
+      const variantText = mainColorText ? (lang==='ar'?` (${mainColorText})`:` (${mainColorText})`) : '';
       const msg=lang==='ar'?`سلام، بغيت نطلب ${productsText}${variantText}. الاسم: ${name}، الهاتف: ${phone}، المدينة: ${city}، العنوان: ${address}`:`Bonjour, je souhaite commander ${productsText}${variantText}. Nom: ${name}, Téléphone: ${phone}, Ville: ${city}, Adresse: ${address}`;
       if(msgEl) msgEl.textContent=lang==='ar'?'تم تسجيل الطلب':'Merci, votre demande a été reçue';
       if(wa) window.open(`${wa}?text=${encodeURIComponent(msg)}`,'_blank');
