@@ -107,7 +107,7 @@ section{padding:88px 0;}
 .product-card{background:linear-gradient(165deg,#3a1e2b,#2a1520); border:1px solid var(--line); border-radius:var(--radius-l); overflow:hidden; box-shadow:var(--shadow); transition:transform .4s cubic-bezier(.2,.8,.2,1), box-shadow .4s ease;}
 .product-card:hover{transform:translateY(-6px); box-shadow:0 30px 60px -22px rgba(0,0,0,.65);}
 .product-visual{position:relative; aspect-ratio:4/3; overflow:hidden; display:flex; align-items:center; justify-content:center;}
-.product-photo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; z-index:1; transition:transform .6s cubic-bezier(.2,.8,.2,1);}
+.product-photo{cursor:zoom-in;position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; z-index:1; transition:transform .6s cubic-bezier(.2,.8,.2,1);}
 .product-card:hover .product-photo{transform:scale(1.045);}
 .product-visual::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none; background:linear-gradient(180deg, rgba(20,10,15,.05) 0%, rgba(20,10,15,0) 30%, rgba(20,10,15,.38) 100%);}
 .product-visual .badge{position:absolute; top:14px; inset-inline-start:14px; z-index:3; background:rgba(20,10,15,.55); backdrop-filter:blur(6px); border:1px solid var(--line); color:var(--gold-soft); font-size:calc(10px * var(--font-scale)); letter-spacing:.14em; text-transform:uppercase; padding:6px 12px; border-radius:20px;}
@@ -257,10 +257,18 @@ html[dir="rtl"] .cart-item-remove{text-align:start;}
 
 body.has-lunea-custom-bg{background-image:linear-gradient(rgba(20,10,15,.72),rgba(20,10,15,.88)),var(--lunea-admin-bg);background-size:cover;background-position:center;background-attachment:fixed;}
 body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,13,19,.38) 0%,rgba(20,10,15,.68) 55%,rgba(24,13,19,.92) 100%),var(--lunea-admin-bg);background-size:cover;background-position:center;}
-.product-gallery-count{position:absolute;right:12px;bottom:12px;z-index:4;padding:5px 9px;border-radius:20px;background:rgba(20,10,15,.65);backdrop-filter:blur(6px);border:1px solid var(--line);color:var(--ivory);font-size:calc(10px * var(--font-scale));}
-.product-gallery-dots{position:absolute;left:50%;bottom:13px;transform:translateX(-50%);z-index:4;display:flex;gap:5px;}
-.product-gallery-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);border:0;padding:0;}
-.product-gallery-dot.active{background:var(--gold-soft);transform:scale(1.25);}
+.product-gallery-dots{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 10px;border-radius:999px;background:rgba(18,10,14,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.14);pointer-events:auto;}
+.product-gallery-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.62);border:0;padding:0;display:block;cursor:pointer;transition:transform .2s ease,background .2s ease,opacity .2s ease;opacity:.9;}
+.product-gallery-dot.active{background:var(--gold-soft);transform:scale(1.45);opacity:1;}
+.product-gallery-dot:focus-visible{outline:1px solid var(--gold-soft);outline-offset:3px;}
+.product-image-lightbox{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(9,6,8,.96);padding:24px 14px;touch-action:none;}
+.product-image-lightbox.open{display:flex;}
+.product-image-lightbox-inner{position:relative;width:min(720px,100%);height:min(88vh,820px);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.product-image-lightbox-img{width:100%;height:100%;object-fit:contain;display:block;border-radius:16px;user-select:none;-webkit-user-drag:none;}
+.product-image-lightbox-close{position:absolute;top:-2px;right:2px;z-index:3;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(30,18,23,.78);color:#f8f1e8;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.product-image-lightbox-dots{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:7px;padding:8px 11px;border-radius:999px;background:rgba(18,10,14,.56);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);}
+.product-image-lightbox-dot{width:7px;height:7px;border:0;border-radius:50%;padding:0;background:rgba(255,255,255,.55);cursor:pointer;}
+.product-image-lightbox-dot.active{background:var(--gold-soft);transform:scale(1.35);}
 
 /* ============================================================
    LANDING PAGES — safe standalone module
@@ -278,7 +286,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-cta{display:inline-flex;align-items:center;justify-content:center;padding:15px 30px;border-radius:999px;background:var(--gold);color:var(--bg-deep);font-weight:600;box-shadow:0 12px 30px rgba(199,161,92,.25)}
 .lp-section{padding:60px 0}
 .lp-section h2{font-size:calc(36px * var(--font-scale));text-align:center;margin-bottom:28px}
-.lp-product-card-img{width:100%;max-height:340px;object-fit:cover;border-radius:12px;margin-bottom:14px;display:block;cursor:pointer}.lp-main-gallery-wrap,.lp-p2-gallery-wrap{display:block}.lp-product-head-top{margin-bottom:16px}.lp-gallery{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding:3px 2px 7px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;scrollbar-width:none}.lp-gallery::-webkit-scrollbar{display:none}.lp-gallery-hint{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:1px 2px 10px;font-size:11px;letter-spacing:.2px;color:var(--muted);white-space:nowrap}.lp-gallery-hint::before{content:"";width:18px;height:1px;background:currentColor;opacity:.35}.lp-gallery-hint span{opacity:.85}
+.lp-product-card-img{width:100%;max-height:340px;object-fit:cover;border-radius:12px;margin-bottom:14px;display:block;cursor:pointer}.lp-main-gallery-wrap,.lp-p2-gallery-wrap{display:block}.lp-product-head-top{margin-bottom:16px}.lp-compact-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin:4px 0 12px;} .lp-compact-dot{width:6px;height:6px;border:0;border-radius:50%;padding:0;background:rgba(255,255,255,.45);cursor:pointer;transition:.2s;} .lp-compact-dot.active{background:var(--gold-soft);transform:scale(1.35);} .lp-gallery{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding:3px 2px 7px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;scrollbar-width:none}.lp-gallery::-webkit-scrollbar{display:none}.lp-gallery-hint{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:1px 2px 10px;font-size:11px;letter-spacing:.2px;color:var(--muted);white-space:nowrap}.lp-gallery-hint::before{content:"";width:18px;height:1px;background:currentColor;opacity:.35}.lp-gallery-hint span{opacity:.85}
 .lp-lightbox{position:fixed;inset:0;z-index:970;background:rgba(0,0,0,.9);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:60px 16px}
 .lp-lightbox.open{display:flex}
 .lp-lightbox-imgs{width:min(680px,100%);display:flex;flex-direction:column;gap:14px}
@@ -1285,7 +1293,7 @@ function renderProducts(){
       <div class="product-visual" data-gallery-id="${p.id}" data-gallery-index="0" style="touch-action:pan-y;">
         <img class="product-photo" src="${gallery[0]}" alt="${t(p.nameKey)}" loading="lazy">
         <span class="badge">${t(p.badgeKey)}</span>
-        ${gallery.length>1?`<span class="product-gallery-count">1 / ${gallery.length}</span><div class="product-gallery-dots">${gallery.map((_,i)=>`<button type="button" class="product-gallery-dot ${i===0?'active':''}" data-gallery-dot="${p.id}:${i}" aria-label="${i+1}"></button>`).join('')}</div>`:''}
+        ${gallery.length>1?`<div class="product-gallery-dots" aria-label="صور المنتج">${gallery.map((_,i)=>`<button type="button" class="product-gallery-dot ${i===0?'active':''}" data-gallery-dot="${p.id}:${i}" aria-label="الصورة ${i+1}"></button>`).join('')}</div>`:''}
       </div>
       <div class="product-info">
         <h3>${t(p.nameKey)}</h3>
@@ -1304,11 +1312,67 @@ function renderProducts(){
   grid.querySelectorAll("[data-gallery-id]").forEach(box=>{
     const id=box.dataset.galleryId, gallery=PRODUCT_IMAGE_GALLERY[id]||[]; if(gallery.length<2) return;
     let idx=0, sx=0;
-    const show=(n)=>{idx=(n+gallery.length)%gallery.length; const img=box.querySelector('.product-photo'); if(img) img.src=gallery[idx]; const c=box.querySelector('.product-gallery-count'); if(c)c.textContent=`${idx+1} / ${gallery.length}`; box.querySelectorAll('.product-gallery-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));};
+    const show=(n)=>{idx=(n+gallery.length)%gallery.length; const img=box.querySelector('.product-photo'); if(img) img.src=gallery[idx]; box.querySelectorAll('.product-gallery-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));};
     box.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
     box.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>35)show(idx+(dx<0?1:-1));},{passive:true});
-    box.addEventListener('click',e=>{const dot=e.target.closest('[data-gallery-dot]');if(dot){e.stopPropagation();show(parseInt(dot.dataset.galleryDot.split(':')[1],10));}});
+    let moved=false;
+    box.addEventListener('touchstart',()=>{moved=false;},{passive:true});
+    box.addEventListener('touchmove',()=>{moved=true;},{passive:true});
+    box.addEventListener('click',e=>{const dot=e.target.closest('[data-gallery-dot]');if(dot){e.stopPropagation();show(parseInt(dot.dataset.galleryDot.split(':')[1],10));return;} if(!moved){openProductImageLightbox(gallery,idx);}});
   });
+}
+
+/* ============================================================
+   PRODUCT IMAGE LIGHTBOX — tap to enlarge, swipe to continue
+   ============================================================ */
+let productImageLightboxState = { gallery:[], index:0, sx:0, sy:0, moved:false };
+function ensureProductImageLightbox(){
+  let lb=document.getElementById('product-image-lightbox');
+  if(lb) return lb;
+  lb=document.createElement('div');
+  lb.id='product-image-lightbox';
+  lb.className='product-image-lightbox';
+  lb.setAttribute('aria-hidden','true');
+  lb.innerHTML=`<div class="product-image-lightbox-inner">
+    <button type="button" class="product-image-lightbox-close" aria-label="إغلاق">✕</button>
+    <img class="product-image-lightbox-img" alt="">
+    <div class="product-image-lightbox-dots"></div>
+  </div>`;
+  document.body.appendChild(lb);
+  const inner=lb.querySelector('.product-image-lightbox-inner');
+  const close=()=>{lb.classList.remove('open');lb.setAttribute('aria-hidden','true');};
+  lb.querySelector('.product-image-lightbox-close').addEventListener('click',close);
+  lb.addEventListener('click',e=>{if(e.target===lb)close();});
+  inner.addEventListener('touchstart',e=>{productImageLightboxState.sx=e.touches[0].clientX;productImageLightboxState.sy=e.touches[0].clientY;productImageLightboxState.moved=false;},{passive:true});
+  inner.addEventListener('touchmove',()=>{productImageLightboxState.moved=true;},{passive:true});
+  inner.addEventListener('touchend',e=>{
+    const st=productImageLightboxState, dx=e.changedTouches[0].clientX-st.sx, dy=e.changedTouches[0].clientY-st.sy;
+    if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)*1.15){ showProductImageLightbox(st.index+(dx<0?1:-1)); }
+  },{passive:true});
+  document.addEventListener('keydown',e=>{
+    if(!lb.classList.contains('open')) return;
+    if(e.key==='Escape') close();
+    if(e.key==='ArrowLeft') showProductImageLightbox(productImageLightboxState.index+1);
+    if(e.key==='ArrowRight') showProductImageLightbox(productImageLightboxState.index-1);
+  });
+  return lb;
+}
+function showProductImageLightbox(index){
+  const st=productImageLightboxState, lb=ensureProductImageLightbox();
+  st.index=(index+st.gallery.length)%st.gallery.length;
+  const img=lb.querySelector('.product-image-lightbox-img');
+  img.src=st.gallery[st.index];
+  img.alt=`${st.index+1}`;
+  lb.querySelector('.product-image-lightbox-dots').innerHTML=st.gallery.map((_,i)=>`<button type="button" class="product-image-lightbox-dot ${i===st.index?'active':''}" data-lightbox-dot="${i}" aria-label="الصورة ${i+1}"></button>`).join('');
+  lb.querySelectorAll('[data-lightbox-dot]').forEach(d=>d.addEventListener('click',e=>{e.stopPropagation();showProductImageLightbox(Number(d.dataset.lightboxDot));}));
+}
+function openProductImageLightbox(gallery,index=0){
+  if(!gallery || gallery.length<1) return;
+  productImageLightboxState.gallery=gallery.slice();
+  productImageLightboxState.index=0;
+  const lb=ensureProductImageLightbox();
+  showProductImageLightbox(index);
+  lb.classList.add('open');lb.setAttribute('aria-hidden','false');
 }
 
 /* ============================================================
@@ -2577,7 +2641,7 @@ function renderLandingPublic(p, isPreview){
       <div class="lp-product-head lp-product-head-top"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice}dh</span></div>
       ${mainImageURL?`<div class="lp-main-gallery-wrap">
         <img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">
-        ${p.showGallery && mainGalleryImages.length>1 ? `<div class="lp-gallery-hint"><span>${lang==='ar'?'اسحبي لرؤية باقي الصور':'Faites glisser pour voir les autres photos'}</span>〉</div><div class="lp-gallery" aria-label="صور إضافية للمنتج">${mainGalleryImages.map(u=>`<img src="${escAttr(u)}" alt="${escAttr(mainProductName)}" loading="lazy">`).join('')}</div>` : ''}
+        ${p.showGallery && mainGalleryImages.length>1 ? `<div class="lp-compact-dots">${mainGalleryImages.map((_,i)=>`<button type="button" class="lp-compact-dot ${i===0?'active':''}" data-lp-dot="main:${i}" aria-label="${i+1}"></button>`).join('')}</div>` : ''}
       </div>`:''}
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${mainActionHTML}
@@ -2599,7 +2663,7 @@ function renderLandingPublic(p, isPreview){
     const p2RequiredNotice = (p2Added && !mainAdded) ? `<p class="lp-main-required">${lang==='ar'?'أضيفي المنتج الرئيسي إلى السلة لإكمال الطلب':'Ajoutez le produit principal au panier pour finaliser la commande'}</p>` : '';
     const p2CardHTML = orderPlaced ? '' : ((product2Name && p2price) ? `<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
       <div class="lp-product-head lp-product-head-top"><b>${escHtml(product2Name)}</b><span class="lp-price">${p2price}dh</span></div>
-      ${p2ImageURL?`<div class="lp-p2-gallery-wrap"><img id="lp-p2-gallery-img" src="${escAttr(p2ImageURL)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="cursor:pointer">${p.showGallery && p2GalleryImages.length>1 ? `<div class="lp-gallery-hint"><span>${lang==='ar'?'اسحبي لرؤية باقي الصور':'Faites glisser pour voir les autres photos'}</span>〉</div><div class="lp-gallery" aria-label="صور إضافية للمنتج الثاني">${p2GalleryImages.map(u=>`<img src="${escAttr(u)}" alt="${escAttr(product2Name)}" loading="lazy">`).join('')}</div>` : ''}</div>`:''}
+      ${p2ImageURL?`<div class="lp-p2-gallery-wrap"><img id="lp-p2-gallery-img" src="${escAttr(p2ImageURL)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="cursor:pointer">${p.showGallery && p2GalleryImages.length>1 ? `<div class="lp-compact-dots">${p2GalleryImages.map((_,i)=>`<button type="button" class="lp-compact-dot ${i===0?'active':''}" data-lp-dot="p2:${i}" aria-label="${i+1}"></button>`).join('')}</div>` : ''}</div>`:''}
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${p2ActionHTML}
       ${p2RequiredNotice}
@@ -2673,16 +2737,20 @@ function renderLandingPublic(p, isPreview){
       }
     };
 
-    document.querySelectorAll('#lp-main-gallery-img, #lp-main-product .lp-gallery img').forEach(img=>img.addEventListener('click',()=>{
-      const lb=document.getElementById('lp-lightbox');
-      if(lb){ lb.classList.add('open'); lb.setAttribute('aria-hidden','false'); }
-    }));
+    const bindLandingCarousel=(imgId,dotPrefix,images,lightboxId)=>{
+      const img=document.getElementById(imgId); if(!img || images.length<2) { if(img) img.style.cursor='zoom-in'; return; }
+      let idx=0,sx=0,sy=0,moved=false;
+      const show=(n)=>{idx=(n+images.length)%images.length;img.src=images[idx];document.querySelectorAll(`[data-lp-dot^="${dotPrefix}:"]`).forEach((d,i)=>d.classList.toggle('active',i===idx));};
+      img.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;moved=false;},{passive:true});
+      img.addEventListener('touchmove',()=>{moved=true;},{passive:true});
+      img.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.15)show(idx+(dx<0?1:-1));else if(!moved)openProductImageLightbox(images,idx);},{passive:true});
+      img.addEventListener('click',e=>{if(!moved)openProductImageLightbox(images,idx);});
+      document.querySelectorAll(`[data-lp-dot^="${dotPrefix}:"]`).forEach(d=>d.addEventListener('click',e=>{e.stopPropagation();show(Number(d.dataset.lpDot.split(':')[1]));}));
+    };
+    bindLandingCarousel('lp-main-gallery-img','main',mainGalleryImages,'lp-lightbox');
+    bindLandingCarousel('lp-p2-gallery-img','p2',p2GalleryImages,'lp-lightbox-p2');
     document.getElementById('lp-lightbox-close')?.addEventListener('click',()=>document.getElementById('lp-lightbox')?.classList.remove('open'));
     document.getElementById('lp-lightbox')?.addEventListener('click',e=>{ if(e.target.id==='lp-lightbox') e.currentTarget.classList.remove('open'); });
-    document.querySelectorAll('#lp-p2-gallery-img, #lp-p2-product .lp-gallery img').forEach(img=>img.addEventListener('click',()=>{
-      const lb=document.getElementById('lp-lightbox-p2');
-      if(lb){ lb.classList.add('open'); lb.setAttribute('aria-hidden','false'); }
-    }));
     document.getElementById('lp-lightbox-p2-close')?.addEventListener('click',()=>document.getElementById('lp-lightbox-p2')?.classList.remove('open'));
     document.getElementById('lp-lightbox-p2')?.addEventListener('click',e=>{ if(e.target.id==='lp-lightbox-p2') e.currentTarget.classList.remove('open'); });
     document.querySelectorAll('[data-lp-lang]').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.lpLang!==lang){ lang=b.dataset.lpLang; paint(); } }));
