@@ -278,13 +278,13 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-cta{display:inline-flex;align-items:center;justify-content:center;padding:15px 30px;border-radius:999px;background:var(--gold);color:var(--bg-deep);font-weight:600;box-shadow:0 12px 30px rgba(199,161,92,.25)}
 .lp-section{padding:60px 0}
 .lp-section h2{font-size:calc(36px * var(--font-scale));text-align:center;margin-bottom:28px}
-.lp-product-card-img{width:100%;max-height:340px;object-fit:cover;border-radius:12px;margin-bottom:14px;display:block;cursor:pointer}.lp-main-gallery-wrap,.lp-p2-gallery-wrap{display:block}.lp-product-head-top{margin-bottom:16px}.lp-gallery{display:flex;flex-wrap:nowrap;gap:12px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;scrollbar-width:none}.lp-gallery::-webkit-scrollbar{display:none}
+.lp-product-card-img{width:100%;max-height:340px;object-fit:cover;border-radius:12px;margin-bottom:14px;display:block;cursor:pointer}.lp-main-gallery-wrap,.lp-p2-gallery-wrap{display:block}.lp-product-head-top{margin-bottom:16px}.lp-gallery{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding:3px 2px 7px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;scrollbar-width:none}.lp-gallery::-webkit-scrollbar{display:none}.lp-gallery-hint{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:1px 2px 10px;font-size:11px;letter-spacing:.2px;color:var(--muted);white-space:nowrap}.lp-gallery-hint::before{content:"";width:18px;height:1px;background:currentColor;opacity:.35}.lp-gallery-hint span{opacity:.85}
 .lp-lightbox{position:fixed;inset:0;z-index:970;background:rgba(0,0,0,.9);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:60px 16px}
 .lp-lightbox.open{display:flex}
 .lp-lightbox-imgs{width:min(680px,100%);display:flex;flex-direction:column;gap:14px}
 .lp-lightbox-imgs img{width:100%;border-radius:12px;display:block}
 .lp-lightbox-close{position:fixed;top:14px;right:14px;z-index:975;width:38px;height:38px;border-radius:50%;background:#1c0f16cc;border:1px solid #ffffff33;color:#f8f1e8;font-size:calc(15px * var(--font-scale));display:flex;align-items:center;justify-content:center;cursor:pointer}
-.lp-gallery img{flex:0 0 min(72vw,240px);width:min(72vw,240px);aspect-ratio:1/1;object-fit:cover;border-radius:18px;border:1px solid var(--line);scroll-snap-align:start}
+.lp-gallery img{flex:0 0 calc((100% - 16px)/3);width:calc((100% - 16px)/3);aspect-ratio:1/1;object-fit:cover;border-radius:14px;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 14px rgba(0,0,0,.07);scroll-snap-align:start;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.lp-gallery img:active{transform:scale(.98);box-shadow:0 2px 8px rgba(0,0,0,.06)}.lp-gallery img:first-child{border-color:var(--gold-soft);box-shadow:0 5px 16px rgba(199,161,92,.18)}
 .lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
 .lp-choose-btn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--gold-soft);background:transparent;color:var(--gold-soft);font-size:calc(13.5px * var(--font-scale));font-weight:500;cursor:pointer;}
@@ -2577,7 +2577,7 @@ function renderLandingPublic(p, isPreview){
       <div class="lp-product-head lp-product-head-top"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice}dh</span></div>
       ${mainImageURL?`<div class="lp-main-gallery-wrap">
         <img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">
-        ${p.showGallery && mainGalleryImages.length>1 ? `<div class="lp-gallery" style="margin-top:2px;">${mainGalleryImages.slice(1).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img" style="margin-bottom:0;cursor:pointer;">`).join('')}</div>` : ''}
+        ${p.showGallery && mainGalleryImages.length>1 ? `<div class="lp-gallery-hint"><span>${lang==='ar'?'اسحبي لرؤية باقي الصور':'Faites glisser pour voir les autres photos'}</span>〉</div><div class="lp-gallery" aria-label="صور إضافية للمنتج">${mainGalleryImages.map(u=>`<img src="${escAttr(u)}" alt="${escAttr(mainProductName)}" loading="lazy">`).join('')}</div>` : ''}
       </div>`:''}
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${mainActionHTML}
@@ -2599,7 +2599,7 @@ function renderLandingPublic(p, isPreview){
     const p2RequiredNotice = (p2Added && !mainAdded) ? `<p class="lp-main-required">${lang==='ar'?'أضيفي المنتج الرئيسي إلى السلة لإكمال الطلب':'Ajoutez le produit principal au panier pour finaliser la commande'}</p>` : '';
     const p2CardHTML = orderPlaced ? '' : ((product2Name && p2price) ? `<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
       <div class="lp-product-head lp-product-head-top"><b>${escHtml(product2Name)}</b><span class="lp-price">${p2price}dh</span></div>
-      ${p2ImageURL?`<div class="lp-p2-gallery-wrap"><img id="lp-p2-gallery-img" src="${escAttr(p2ImageURL)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="cursor:pointer">${p.showGallery && p2GalleryImages.length>1 ? `<div class="lp-gallery" style="margin-top:2px;">${p2GalleryImages.slice(1).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="margin-bottom:0;cursor:pointer;">`).join('')}</div>` : ''}</div>`:''}
+      ${p2ImageURL?`<div class="lp-p2-gallery-wrap"><img id="lp-p2-gallery-img" src="${escAttr(p2ImageURL)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="cursor:pointer">${p.showGallery && p2GalleryImages.length>1 ? `<div class="lp-gallery-hint"><span>${lang==='ar'?'اسحبي لرؤية باقي الصور':'Faites glisser pour voir les autres photos'}</span>〉</div><div class="lp-gallery" aria-label="صور إضافية للمنتج الثاني">${p2GalleryImages.map(u=>`<img src="${escAttr(u)}" alt="${escAttr(product2Name)}" loading="lazy">`).join('')}</div>` : ''}</div>`:''}
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${p2ActionHTML}
       ${p2RequiredNotice}
