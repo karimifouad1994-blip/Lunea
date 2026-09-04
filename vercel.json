@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/offre",
+      "destination": "/?landing=offre"
+    },
+    {
       "source": "/p/:slug",
       "destination": "/?landing=:slug"
     }
