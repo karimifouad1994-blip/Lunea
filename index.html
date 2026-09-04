@@ -2540,7 +2540,14 @@ function renderLandingPublic(p, isPreview){
     const p2price=Number(String(p.product2Price||'0').replace(/[^0-9.]/g,''))||0;
     const mainImageURL = p.heroImage || (mainSourceProduct && ((PRODUCT_IMAGE_GALLERY[mainSourceProduct.id]||[])[0] || PRODUCT_IMAGES[mainSourceProduct.id])) || (p.gallery||[])[0] || '';
     const p2ImageURL = p.product2Image || (product2SourceProduct && ((PRODUCT_IMAGE_GALLERY[product2SourceProduct.id]||[])[0] || PRODUCT_IMAGES[product2SourceProduct.id])) || '';
-    const mainGalleryImages = [mainImageURL, ...(p.gallery||[])].filter((u,i,arr)=>u && arr.indexOf(u)===i);
+    /* When the landing page uses a ready-made LUXIA product, inherit ALL of that
+       product's gallery images automatically. Previously only the primary image
+       was used, so the landing page lost the product gallery. */
+    const mainSourceGallery = mainSourceProduct
+      ? ((PRODUCT_IMAGE_GALLERY[mainSourceProduct.id]||[]).filter(Boolean))
+      : [];
+    const mainGalleryImages = [mainImageURL, ...mainSourceGallery, ...(p.gallery||[])]
+      .filter((u,i,arr)=>u && arr.indexOf(u)===i);
 
     const mainPrice=Number(String(p.price||'0').replace(/[^0-9.]/g,''))||0;
     const mainVariantReady = !mainHasVariants || isReady(mainHasColors, mainPack, mainHasSizes, mainState);
@@ -2562,7 +2569,10 @@ function renderLandingPublic(p, isPreview){
       <div style="font-family:var(--font-display);font-size:calc(24px * var(--font-scale));margin-bottom:10px;">${lang==='ar'?'تم الطلب بنجاح ❤️':'Commande passée avec succès ❤️'}</div>
       <p style="color:var(--ivory-dim);font-size:calc(15px * var(--font-scale))">${lang==='ar'?'غادي نتصلو بيك قريبا لتأكيد الطلب':'Nous vous contacterons bientôt pour confirmer votre commande'}</p>
     </div>` : `<div id="lp-main-product" class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
-      ${mainImageURL?`<img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">`:''}
+      ${mainImageURL?`<div class="lp-main-gallery-wrap">
+        <img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">
+        ${p.showGallery && mainGalleryImages.length>1 ? `<div class="lp-gallery" style="margin-top:2px;">${mainGalleryImages.slice(1).map(u=>`<img src="${escAttr(u)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img" style="margin-bottom:0;cursor:pointer;">`).join('')}</div>` : ''}
+      </div>`:''}
       <div class="lp-product-label">${lang==='ar'?'المنتج الرئيسي':'Produit principal'}</div>
       <div class="lp-product-head"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice} DH</span></div>
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
@@ -2659,10 +2669,10 @@ function renderLandingPublic(p, isPreview){
       }
     };
 
-    document.getElementById('lp-main-gallery-img')?.addEventListener('click',()=>{
+    document.querySelectorAll('#lp-main-gallery-img, #lp-main-product .lp-gallery img').forEach(img=>img.addEventListener('click',()=>{
       const lb=document.getElementById('lp-lightbox');
       if(lb){ lb.classList.add('open'); lb.setAttribute('aria-hidden','false'); }
-    });
+    }));
     document.getElementById('lp-lightbox-close')?.addEventListener('click',()=>document.getElementById('lp-lightbox')?.classList.remove('open'));
     document.getElementById('lp-lightbox')?.addEventListener('click',e=>{ if(e.target.id==='lp-lightbox') e.currentTarget.classList.remove('open'); });
     document.querySelectorAll('[data-lp-lang]').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.lpLang!==lang){ lang=b.dataset.lpLang; paint(); } }));
