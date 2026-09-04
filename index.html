@@ -114,6 +114,8 @@ section{padding:88px 0;}
 .product-video{width:100%; max-height:260px; border-radius:var(--radius-m); margin:10px 0; background:#000; display:block;}
 #variantVideo video{width:100%; max-height:260px; border-radius:var(--radius-m); margin:10px 0 0; background:#000; display:block;}
 .lp-video{width:100%; max-width:640px; margin:0 auto; display:block; border-radius:14px; background:#000;}
+.lp-video2-section{padding-top:8px;padding-bottom:8px;}
+.lp-video2-section .lunea-video-wrap{max-width:760px;margin:0 auto;}
 .product-info{padding:22px 20px 24px;}
 .product-info h3{font-size:calc(23px * var(--font-scale)); color:var(--ivory); margin-bottom:4px;}
 .product-price{color:var(--gold-soft); font-size:calc(16px * var(--font-scale)); font-weight:500; margin-bottom:10px;}
@@ -712,7 +714,7 @@ const I18N = {
     "admin.imgDeleteLastError":"Impossible de supprimer la dernière image du produit.","admin.imgSaveError":"Espace de stockage insuffisant dans ce navigateur pour enregistrer cette image.",
     "admin.field.video":"Vidéo produit (lien mp4)","admin.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur",
     "admin.videoUploading":"⏳ Téléversement...","admin.videoUploaded":"✅ Vidéo téléversée — cliquez sur « Enregistrer » pour valider","admin.videoUploadToast":"Vidéo téléversée, n'oubliez pas d'enregistrer",
-    "lp.videoLabel":"Vidéo (mp4) — affichée avant le bouton de commande","lp.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur",
+    "lp.videoLabel":"Vidéo (mp4) — affichée avant le bouton de commande","lp.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur","lp.video2Label":"Deuxième vidéo — upload direct depuis le téléphone/ordinateur","lp.video2Hint":"Cette vidéo sera affichée directement avant le produit principal.",
     "lp.editTitle":"Modifier Landing Page","lp.createTitle":"Créer Landing Page","lp.statusHint":"Draft → Preview → Publish. Le site principal reste séparé.",
     "lp.sourceTitle":"Source du produit","lp.sourceSelectLabel":"Choisir un produit du site","lp.sourceNewOption":"— Nouveau produit / contenu personnalisé —",
     "lp.sourceHint":"Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.",
@@ -801,7 +803,7 @@ const I18N = {
     "admin.imgDeleteLastError":"لا يمكن حذف الصورة الوحيدة للمنتج.","admin.imgSaveError":"مساحة التخزين غير كافية في هذا المتصفح لحفظ هذه الصورة.",
     "admin.field.video":"رابط فيديو المنتج (mp4)","admin.videoUploadLabel":"تحميل فيديو من الجهاز",
     "admin.videoUploading":"⏳ جارٍ الرفع...","admin.videoUploaded":"✅ تم رفع الفيديو — اضغط «حفظ» لتأكيد الحفظ","admin.videoUploadToast":"تم رفع الفيديو، لا تنسَ الضغط على حفظ",
-    "lp.videoLabel":"رابط الفيديو (mp4) — يظهر قبل زر الطلب","lp.videoUploadLabel":"تحميل فيديو من الجهاز",
+    "lp.videoLabel":"رابط الفيديو (mp4) — يظهر قبل زر الطلب","lp.videoUploadLabel":"تحميل فيديو من الجهاز","lp.video2Label":"الفيديو الثاني — تحميل مباشر من الهاتف أو الحاسوب","lp.video2Hint":"هذا الفيديو غادي يبان مباشرة قبل المنتج الرئيسي.",
     "lp.editTitle":"تعديل صفحة الهبوط","lp.createTitle":"إنشاء صفحة هبوط","lp.statusHint":"مسودة ← معاينة ← نشر. الموقع الرئيسي يبقى منفصلاً.",
     "lp.sourceTitle":"مصدر المنتج","lp.sourceSelectLabel":"اختيار منتج من الموقع","lp.sourceNewOption":"— منتج جديد / محتوى مخصص —",
     "lp.sourceHint":"اختيار منتج ينسخ معلوماته إلى صفحة الهبوط. التعديلات على صفحة الهبوط تبقى مستقلة عن المنتج الأصلي.",
@@ -2274,7 +2276,7 @@ let LANDING_EDIT_ID = null;
 
 function landingDefaults(){ return {
   slug:"offre", status:"draft", language:"ar", kicker:"LUXIA",
-  price:"", oldPrice:"", whatsapp:"", heroImage:"", video:"",
+  price:"", oldPrice:"", whatsapp:"", heroImage:"", video:"", video2:"",
   gallery:[], showOrderForm:true,
   showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true,
   product2Id:"", product2Price:"", product2Image:"", product2Gallery:[],
@@ -2383,6 +2385,7 @@ function landingEditorHTML(p){
       <div><label>${t("lp.whatsappLabel")}</label><input id="lp-whatsapp" value="${escAttr(p.whatsapp)}"></div>
       <div class="full"><label>${t("lp.videoLabel")}</label><input id="lp-video" value="${escAttr(p.video||'')}" placeholder="https://.../video.mp4" style="direction:ltr;text-align:left;"></div>
       <div class="full"><label>${t("lp.videoUploadLabel")}</label><input type="file" accept="video/*" id="lp-video-file"> <span id="lp-video-status" style="font-size:calc(12px * var(--font-scale));color:var(--gold-soft);"></span></div>
+      <div class="full" style="margin-top:8px;padding-top:16px;border-top:1px solid var(--line);"><label>${t("lp.video2Label")}</label><input type="file" accept="video/*" id="lp-video2-file"><span id="lp-video2-status" style="display:block;margin-top:6px;font-size:calc(12px * var(--font-scale));color:var(--gold-soft);"></span><small>${t("lp.video2Hint")}</small></div>
     </div></div>
     <div class="admin-card"><h3 style="margin-bottom:16px">Contenu — Français</h3><div class="lp-admin-grid">
       <div class="full"><label>${t("lp.titleLabel")} (FR)</label><input id="lp-title-fr" value="${escAttr(p.titleFr||'')}"></div>
@@ -2440,6 +2443,7 @@ function collectLandingForm(){
   p.gallery=[...document.querySelectorAll('[data-lpimg]')].map(x=>x.value.trim()).filter(Boolean);
   p.heroImage=p.gallery[0]||'';
   p.video=document.getElementById('lp-video')?.value.trim()||'';
+  p.video2=(window.__luneaLandingVideo2Temp&&window.__luneaLandingVideo2Temp[LANDING_EDIT_ID||'__new__'])||p.video2||'';
   p.sourceProductId=document.getElementById('lp-source-product')?.value||'';
   p.product2Id=document.getElementById('lp-product2-id')?.value||'';
   p.product2NameFr=document.getElementById('lp-product2-name-fr')?.value.trim()||'';
@@ -2508,6 +2512,26 @@ function bindLandingEditor(){
       const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());
       const u=await uploadProductVideoToStorage(f,'landing-'+slug);
       if(urlInput) urlInput.value=u;
+      if(statusEl) statusEl.textContent=t("admin.videoUploaded");
+      showToast(t("admin.videoUploadToast"));
+    }catch(err){
+      console.error(err);
+      if(statusEl) statusEl.textContent="";
+      showToast(err?.message||t("lp.uploadError"));
+    }
+    e.target.value="";
+  });
+  document.getElementById('lp-video2-file')?.addEventListener('change',async e=>{
+    const f=e.target.files?.[0]; if(!f)return;
+    const statusEl=document.getElementById('lp-video2-status');
+    if(statusEl) statusEl.textContent=t("admin.videoUploading");
+    try{
+      const slug=document.getElementById('lp-slug').value.trim()||('landing-'+Date.now());
+      const u=await uploadProductVideoToStorage(f,'landing-'+slug+'-video2');
+      const page=landingNormalize(LANDING_PAGES.find(x=>x.id===LANDING_EDIT_ID)||{});
+      page.video2=u;
+      LANDING_PAGES = LANDING_PAGES.map(x=>x.id===LANDING_EDIT_ID?{...x,video2:u}:x);
+      const current=window.__luneaLandingVideo2Temp || {}; current[LANDING_EDIT_ID||'__new__']=u; window.__luneaLandingVideo2Temp=current;
       if(statusEl) statusEl.textContent=t("admin.videoUploaded");
       showToast(t("admin.videoUploadToast"));
     }catch(err){
@@ -2695,7 +2719,7 @@ function renderLandingPublic(p, isPreview){
     const cartFabHTML=`<button type="button" id="lp-cart-fab" class="lp-cart-fab" aria-label="${lang==='ar'?'فتح السلة':'Ouvrir le panier'}">🛒<span id="lp-cart-count" class="lp-cart-count">${(mainAdded?1:0)+(p2Added?1:0)}</span></button><div id="lp-cart-drawer" class="lp-cart-drawer" aria-hidden="true"><div class="lp-cart-panel"><div class="lp-cart-head"><div style="font-family:var(--font-display);font-size:calc(22px * var(--font-scale))">${lang==='ar'?'سلتك':'Votre panier'}</div><button type="button" id="lp-cart-close" class="lp-cart-close">×</button></div><div id="lp-cart-live"></div></div></div>`;
     const lightboxHTML = mainGalleryImages.length>1 ? `<div id="lp-lightbox" class="lp-lightbox" aria-hidden="true"><button type="button" id="lp-lightbox-close" class="lp-lightbox-close">✕</button><div class="lp-lightbox-imgs">${mainGalleryImages.map(u=>`<img src="${escAttr(u)}">`).join('')}</div></div>` : '';
     const p2LightboxHTML = p2GalleryImages.length>1 ? `<div id="lp-lightbox-p2" class="lp-lightbox" aria-hidden="true"><button type="button" id="lp-lightbox-p2-close" class="lp-lightbox-close">✕</button><div class="lp-lightbox-imgs">${p2GalleryImages.map(u=>`<img src="${escAttr(u)}">`).join('')}</div></div>` : '';
-    document.body.innerHTML=`${cartFabHTML}${closeBtnHTML}${langSwitchHTML}${lightboxHTML}${p2LightboxHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)}dh ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}${description?`<p style="max-width:640px;margin:14px auto 0;text-align:center;color:var(--ivory-dim);font-size:calc(16px * var(--font-scale))">${escHtml(description)}</p>`:''}<a class="lp-cta" href="#lp-main-product">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${p.showOrderForm?`<section class="lp-section" id="order">${mainCardHTML.replace('__LP_FORM_HERE__',formHTML)}${p2CardHTML}</section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}<p style="text-align:center;color:var(--ivory-dim);font-size:calc(14px * var(--font-scale));margin-top:30px">${lang==='ar'?'التوصيل مجاني في جميع أنحاء المغرب':'Livraison gratuite partout au Maroc'}</p></div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
+    document.body.innerHTML=`${cartFabHTML}${closeBtnHTML}${langSwitchHTML}${lightboxHTML}${p2LightboxHTML}<main class="lp-preview"><section class="lp-hero" style="background-image:url('${escAttr(p.heroImage||'')}')"><div class="lp-hero-content"><div class="lp-kicker">${escHtml(p.kicker)}</div><h1 class="lp-title">${escHtml(title)}</h1><p class="lp-subtitle">${escHtml(subtitle)}</p>${p.price?`<div class="lp-price">${escHtml(p.price)}dh ${p.oldPrice?`<span class="lp-old-price">${escHtml(p.oldPrice)}</span>`:''}</div>`:''}${description?`<p style="max-width:640px;margin:14px auto 0;text-align:center;color:var(--ivory-dim);font-size:calc(16px * var(--font-scale))">${escHtml(description)}</p>`:''}<a class="lp-cta" href="#lp-main-product">${lang==='ar'?'إكتشفي':'Découvrir'}</a></div></section><div class="lp-wrap">${p.video2?`<section class="lp-section lp-video-section lp-video2-section"><div class="lunea-video-wrap"><video class="lp-video lp-video2" src="${escAttr(p.video2)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}${p.showOrderForm?`<section class="lp-section" id="order">${mainCardHTML.replace('__LP_FORM_HERE__',formHTML)}${p2CardHTML}</section>`:''}${p.showBenefits&&benefits?`<section class="lp-section"><h2>${lang==='ar'?'المميزات':'Les avantages'}</h2><div class="lp-benefits">${benefits}</div></section>`:''}${p.showReviews&&reviews?`<section class="lp-section"><h2>${lang==='ar'?'آراء الزبناء':'Avis clientes'}</h2>${reviews}</section>`:''}${p.showFaq&&faqs?`<section class="lp-section lp-faq"><h2>FAQ</h2>${faqs}</section>`:''}${p.video?`<section class="lp-section"><div class="lunea-video-wrap"><video class="lp-video" src="${escAttr(p.video)}" autoplay loop preload="auto" playsinline disablepictureinpicture disableremoteplayback controlslist="nodownload noplaybackrate noremoteplayback"></video><button type="button" class="lunea-sound-btn" aria-label="إيقاف الصوت" title="إيقاف الصوت">🔊</button></div></section>`:''}<p style="text-align:center;color:var(--ivory-dim);font-size:calc(14px * var(--font-scale));margin-top:30px">${lang==='ar'?'التوصيل مجاني في جميع أنحاء المغرب':'Livraison gratuite partout au Maroc'}</p></div>${p.showWhatsapp&&wa?`<div class="lp-sticky"><a class="lp-cta" href="${escAttr(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}</main>`;
 
     const bindLandingPickerButtons=(root=document)=>{
       root.querySelectorAll('[data-pack-color]').forEach(btn=>btn.addEventListener('click',()=>{
