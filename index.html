@@ -295,7 +295,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-lightbox-imgs img{width:100%;border-radius:12px;display:block}
 .lp-lightbox-close{position:fixed;top:14px;right:14px;z-index:975;width:38px;height:38px;border-radius:50%;background:#1c0f16cc;border:1px solid #ffffff33;color:#f8f1e8;font-size:calc(15px * var(--font-scale));display:flex;align-items:center;justify-content:center;cursor:pointer}
 .lp-gallery img{flex:0 0 calc((100% - 16px)/3);width:calc((100% - 16px)/3);aspect-ratio:1/1;object-fit:cover;border-radius:14px;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 14px rgba(0,0,0,.07);scroll-snap-align:start;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.lp-gallery img:active{transform:scale(.98);box-shadow:0 2px 8px rgba(0,0,0,.06)}.lp-gallery img:first-child{border-color:var(--gold-soft);box-shadow:0 5px 16px rgba(199,161,92,.18)}
-.lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.lp-product-details{margin:14px 0 4px;padding:14px 15px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.025)}.lp-product-details-title{font-family:var(--font-display);font-size:calc(14px * var(--font-scale));color:var(--gold-soft);margin-bottom:7px}.lp-product-desc p{margin:0;color:var(--ivory-dim);font-size:calc(13px * var(--font-scale));line-height:1.65}.lp-product-benefits{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.lp-product-benefits ul{margin:0;padding:0 18px 0 0;color:var(--ivory-dim);font-size:calc(13px * var(--font-scale));line-height:1.7}.lp-product-benefits li{margin:3px 0}html[dir="ltr"] .lp-product-benefits ul{padding:0 0 0 18px}
 .lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
 .lp-choose-btn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--gold-soft);background:transparent;color:var(--gold-soft);font-size:calc(13.5px * var(--font-scale));font-weight:500;cursor:pointer;}
 .lp-product-order-label{margin-top:12px;margin-bottom:8px;font-size:calc(12px * var(--font-scale));color:var(--ivory-dim)}.lp-product-label{font-size:calc(11px * var(--font-scale));letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px}.lp-product-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.lp-product-head .lp-price{margin-bottom:0}.lp-added-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.lp-added-actions{display:flex;align-items:center;gap:12px}.lp-added{color:var(--gold-soft);font-size:calc(13.5px * var(--font-scale))}.lp-edit-btn,.lp-remove-btn{background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:calc(12.5px * var(--font-scale));cursor:pointer}.lp-remove-btn{color:#c9a877}.lp-main-required{margin:0;text-align:center;font-size:calc(13px * var(--font-scale));color:var(--ivory-dim)}.lp-picker{margin-top:12px}
@@ -601,6 +601,24 @@ const PRODUCTS = [
   { id:"chemise",      nameKey:"p.chemise.name",      descKey:"p.chemise.desc",      price:250, badgeKey:"p.chemise.badge" },
   { id:"packchemise",  nameKey:"p.packchemise.name",  descKey:"p.packchemise.desc",  price:399, badgeKey:"p.packchemise.badge" },
 ];
+const PRODUCT_BENEFITS = {
+  string:{fr:["Dentelle fine et élégante","Coupe délicate et confortable","Légère et agréable à porter"],ar:["دانتيل ناعم وأنيق","قصة مريحة وراقية","خفيف ومريح في اللبس"]},
+  packstring:{fr:["Pack de 3 pièces","3 coloris essentiels","Confort et douceur au quotidien"],ar:["باك من 3 قطع","3 ألوان أساسية","راحة ونعومة للاستخدام اليومي"]},
+  chemise:{fr:["Matière soyeuse et douce","Coupe élégante qui épouse la silhouette","Confort idéal pour la nuit"],ar:["خامة حريرية وناعمة","قصة أنيقة تنساب مع القوام","راحة مثالية أثناء النوم"]},
+  packchemise:{fr:["Pack de 2 pièces","Deux modèles raffinés","Matière douce et confortable"],ar:["باك من قطعتين","تصميمان راقيان","خامة ناعمة ومريحة"]}
+};
+function getProductDescription(prod,lang){ const b=prod?(PRODUCT_BACKEND_ROWS[prod.id]||{}):{}; return lang==='ar'?(b.desc_ar||I18N.ar[prod?.descKey]||''):(b.desc_fr||I18N.fr[prod?.descKey]||''); }
+function getProductBenefits(prod,lang){
+  if(!prod) return []; const b=PRODUCT_BACKEND_ROWS[prod.id]||{}; const raw=lang==='ar'?b.benefits_ar:b.benefits_fr;
+  if(Array.isArray(raw)) return raw.filter(Boolean); if(typeof raw==='string'&&raw.trim()) return raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  return (PRODUCT_BENEFITS[prod.id]?.[lang]||[]).slice();
+}
+function renderProductDetails(prod,lang){
+  if(!prod) return ''; const d=getProductDescription(prod,lang), bs=getProductBenefits(prod,lang);
+  const dhtml=d?`<div class="lp-product-desc"><div class="lp-product-details-title">${lang==='ar'?'الوصف':'Description'}</div><p>${escHtml(d)}</p></div>`:'';
+  const bhtml=bs.length?`<div class="lp-product-benefits"><div class="lp-product-details-title">${lang==='ar'?'المميزات':'Les avantages'}</div><ul>${bs.map(x=>`<li>${escHtml(String(x))}</li>`).join('')}</ul></div>`:'';
+  return (dhtml||bhtml)?`<div class="lp-product-details">${dhtml}${bhtml}</div>`:'';
+}
 /* ============================================================
    PRODUCT VARIANTS (colors/sizes) + PACK INFO + QUANTITY
    Admin-editable, client-side only (same localStorage approach as
@@ -716,7 +734,7 @@ const I18N = {
     "admin.videoUploading":"⏳ Téléversement...","admin.videoUploaded":"✅ Vidéo téléversée — cliquez sur « Enregistrer » pour valider","admin.videoUploadToast":"Vidéo téléversée, n'oubliez pas d'enregistrer",
     "lp.videoLabel":"Vidéo (mp4) — affichée avant le bouton de commande","lp.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur","lp.video2Label":"Deuxième vidéo — upload direct depuis le téléphone/ordinateur","lp.video2Hint":"Cette vidéo sera affichée directement avant le produit principal.",
     "lp.editTitle":"Modifier Landing Page","lp.createTitle":"Créer Landing Page","lp.statusHint":"Draft → Preview → Publish. Le site principal reste séparé.",
-    "lp.sourceTitle":"Source du produit","lp.sourceSelectLabel":"Choisir un produit du site","lp.sourceNewOption":"— Nouveau produit / contenu personnalisé —",
+    "lp.typeLabel":"Type de Landing Page","lp.typeLuxia":"LUXIA — /offre","lp.typeOneshop":"OneShop — /oneshop","lp.typeHint":"اختار غير شنو هي الـ Landing Page اللي بغيتي تخدم. كود OneShop مستقل على كود LUXIA.","lp.openOneShop":"فتح OneShop","lp.openOneShopAdmin":"إدارة OneShop","lp.sourceTitle":"Source du produit","lp.sourceSelectLabel":"Choisir un produit du site","lp.sourceNewOption":"— Nouveau produit / contenu personnalisé —",
     "lp.sourceHint":"Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.",
     "lp.product2Title":"Produit secondaire (optionnel)","lp.product2SelectLabel":"Ajouter un second produit à la page (optionnel)","lp.product2NoneOption":"— Aucun second produit —",
     "lp.product2Hint":"Le client pourra l'ajouter à sa commande via une option supplémentaire dans le formulaire, à son propre prix.",
@@ -805,7 +823,7 @@ const I18N = {
     "admin.videoUploading":"⏳ جارٍ الرفع...","admin.videoUploaded":"✅ تم رفع الفيديو — اضغط «حفظ» لتأكيد الحفظ","admin.videoUploadToast":"تم رفع الفيديو، لا تنسَ الضغط على حفظ",
     "lp.videoLabel":"رابط الفيديو (mp4) — يظهر قبل زر الطلب","lp.videoUploadLabel":"تحميل فيديو من الجهاز","lp.video2Label":"الفيديو الثاني — تحميل مباشر من الهاتف أو الحاسوب","lp.video2Hint":"هذا الفيديو غادي يبان مباشرة قبل المنتج الرئيسي.",
     "lp.editTitle":"تعديل صفحة الهبوط","lp.createTitle":"إنشاء صفحة هبوط","lp.statusHint":"مسودة ← معاينة ← نشر. الموقع الرئيسي يبقى منفصلاً.",
-    "lp.sourceTitle":"مصدر المنتج","lp.sourceSelectLabel":"اختيار منتج من الموقع","lp.sourceNewOption":"— منتج جديد / محتوى مخصص —",
+    "lp.typeLabel":"نوع صفحة الهبوط","lp.typeLuxia":"LUXIA — /offre","lp.typeOneshop":"OneShop — /oneshop","lp.typeHint":"اختار غير نوع صفحة الهبوط. كود OneShop مستقل على كود LUXIA.","lp.openOneShop":"فتح OneShop","lp.openOneShopAdmin":"إدارة OneShop","lp.sourceTitle":"مصدر المنتج","lp.sourceSelectLabel":"اختيار منتج من الموقع","lp.sourceNewOption":"— منتج جديد / محتوى مخصص —",
     "lp.sourceHint":"اختيار منتج ينسخ معلوماته إلى صفحة الهبوط. التعديلات على صفحة الهبوط تبقى مستقلة عن المنتج الأصلي.",
     "lp.product2Title":"منتج ثانٍ (اختياري)","lp.product2SelectLabel":"إضافة منتج ثانٍ للصفحة (اختياري)","lp.product2NoneOption":"— بدون منتج ثانٍ —",
     "lp.product2Hint":"يمكن للزبون إضافته إلى طلبه عبر خيار إضافي في نموذج الطلب، بسعره الخاص.",
@@ -2275,7 +2293,7 @@ let LANDING_PAGES = [];
 let LANDING_EDIT_ID = null;
 
 function landingDefaults(){ return {
-  slug:"offre", status:"draft", language:"ar", kicker:"LUXIA",
+  slug:"offre", type:"luxia", status:"draft", language:"ar", kicker:"LUXIA",
   price:"", oldPrice:"", whatsapp:"", heroImage:"", video:"", video2:"",
   gallery:[], showOrderForm:true,
   showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true,
@@ -2291,7 +2309,7 @@ function landingDefaults(){ return {
 }; }
 function landingNormalize(x){
   const d=landingDefaults(); const c=x?.config||{};
-  const merged={...d,...c};
+  const merged={...d,...c}; merged.type = merged.type==="oneshop" ? "oneshop" : "luxia";
   /* Backward-compat: pages saved before the bilingual fields existed only had a
      single title/subtitle/description/cta/product2Name (and a `language` flag).
      If the new Fr/Ar pair is still empty, pour the legacy value into whichever
@@ -2359,6 +2377,21 @@ function landingEditorHTML(p){
     return `<option value="${escAttr(x.id)}" ${sourceProductId===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;
   }).join('');
   return `<div class="lp-admin">
+    <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.typeLabel")}</h3>
+      <div class="lp-admin-grid">
+        <div class="full">
+          <select id="lp-type">
+            <option value="luxia" ${p.type==='luxia'?'selected':''}>${t("lp.typeLuxia")}</option>
+            <option value="oneshop" ${p.type==='oneshop'?'selected':''}>${t("lp.typeOneshop")}</option>
+          </select>
+          <small>${t("lp.typeHint")}</small>
+        </div>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-ghost" href="/oneshop" target="_blank" rel="noopener">${t("lp.openOneShop")}</a>
+          <a class="btn btn-ghost" href="/oneshop#admin" target="_blank" rel="noopener">${t("lp.openOneShopAdmin")}</a>
+        </div>
+      </div>
+    </div>
     <div class="admin-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="font-family:var(--font-display);font-size:calc(30px * var(--font-scale))">${p.id?t("lp.editTitle"):t("lp.createTitle")}</h2><small>${t("lp.statusHint")}</small></div><span class="lp-status">${escHtml(p.status)}</span></div></div>
     <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.sourceTitle")}</h3>
       <div class="lp-admin-grid">
@@ -2428,6 +2461,7 @@ function collectLandingForm(){
      else into "-". The old ASCII-only regex silently wiped out any Arabic slug,
      leaving an empty string and triggering a false "slug required" error. */
   const slugify = s => (s||"").trim().toLowerCase().replace(/[^\p{L}\p{N}-]+/gu,'-').replace(/^-+|-+$/g,'');
+  p.type=document.getElementById('lp-type')?.value==="oneshop" ? "oneshop" : "luxia";
   p.slug = slugify(document.getElementById('lp-slug').value);
   p.status=document.getElementById('lp-status').value; p.language=document.getElementById('lp-language').value;
   ['kicker','price','oldprice','whatsapp'].forEach(k=>{const id='lp-'+k; p[k==='oldprice'?'oldPrice':k]=document.getElementById(id).value.trim();});
@@ -2470,6 +2504,12 @@ async function renderAdminLandingPages(){
   document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm(t("lp.confirmDelete")))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast(t("lp.deletedToast"));await renderAdminLandingPages();}catch(e){showToast(e?.message||t("admin.backendWriteError"));}}));
 }
 function bindLandingEditor(){
+  document.getElementById('lp-type')?.addEventListener('change',()=>{
+    const type=document.getElementById('lp-type').value;
+    const slugEl=document.getElementById('lp-slug');
+    if(type==='oneshop' && slugEl && (!slugEl.value || slugEl.value==='offre')) slugEl.value='oneshop';
+    if(type==='luxia' && slugEl && slugEl.value==='oneshop') slugEl.value='offre';
+  });
   document.getElementById('lp-source-product')?.addEventListener('change',()=>{
     const id=document.getElementById('lp-source-product').value; if(!id) return;
     const prod=PRODUCTS.find(x=>x.id===id); if(!prod) return;
@@ -2667,6 +2707,7 @@ function renderLandingPublic(p, isPreview){
         <img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">
         ${p.showGallery && mainGalleryImages.length>1 ? `<div class="lp-compact-dots">${mainGalleryImages.map((_,i)=>`<button type="button" class="lp-compact-dot ${i===0?'active':''}" data-lp-dot="main:${i}" aria-label="${i+1}"></button>`).join('')}</div>` : ''}
       </div>`:''}
+      ${renderProductDetails(mainSourceProduct,lang)}
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${mainActionHTML}
       ${mainAdded && !showForm ? `<button type="button" id="lp-confirm-btn" class="lp-cta" style="width:100%;text-align:center;border:none;cursor:pointer;margin-top:12px;">${lang==='ar'?'إتمام الطلب':'Finaliser la commande'}</button>` : ''}
@@ -2688,6 +2729,7 @@ function renderLandingPublic(p, isPreview){
     const p2CardHTML = orderPlaced ? '' : ((product2Name && p2price) ? `<div class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
       <div class="lp-product-head lp-product-head-top"><b>${escHtml(product2Name)}</b><span class="lp-price">${p2price}dh</span></div>
       ${p2ImageURL?`<div class="lp-p2-gallery-wrap"><img id="lp-p2-gallery-img" src="${escAttr(p2ImageURL)}" alt="${escAttr(product2Name)}" class="lp-product-card-img" style="cursor:pointer">${p.showGallery && p2GalleryImages.length>1 ? `<div class="lp-compact-dots">${p2GalleryImages.map((_,i)=>`<button type="button" class="lp-compact-dot ${i===0?'active':''}" data-lp-dot="p2:${i}" aria-label="${i+1}"></button>`).join('')}</div>` : ''}</div>`:''}
+      ${renderProductDetails(product2SourceProduct,lang)}
       <div class="lp-product-order-label">${lang==='ar'?'طلب هذا المنتج':'Commander ce produit'}</div>
       ${p2ActionHTML}
       ${p2RequiredNotice}
