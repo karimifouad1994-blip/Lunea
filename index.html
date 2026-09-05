@@ -1508,10 +1508,8 @@ function renderProducts(){
       if(thumb){e.stopPropagation();show(parseInt(thumb.dataset.galleryThumb.split(':')[1],10));return;}
       if(!moved){openProductImageLightbox(gallery,idx);}
     });
-    // Auto-rotate the homepage product gallery just like the landing page.
-    let autoTimer=setInterval(()=>show(idx+1),4200);
-    box.addEventListener('touchstart',()=>{clearInterval(autoTimer);},{passive:true});
-    box.addEventListener('touchend',()=>{clearInterval(autoTimer);autoTimer=setInterval(()=>show(idx+1),4200);},{passive:true});
+    // Manual gallery only: no automatic image rotation.
+    // Images change only when the customer swipes or taps a thumbnail/dot.
   });
 }
 
