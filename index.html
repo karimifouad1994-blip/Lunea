@@ -734,7 +734,7 @@ const I18N = {
     "admin.videoUploading":"⏳ Téléversement...","admin.videoUploaded":"✅ Vidéo téléversée — cliquez sur « Enregistrer » pour valider","admin.videoUploadToast":"Vidéo téléversée, n'oubliez pas d'enregistrer",
     "lp.videoLabel":"Vidéo (mp4) — affichée avant le bouton de commande","lp.videoUploadLabel":"Ou uploader une vidéo depuis le téléphone/l'ordinateur","lp.video2Label":"Deuxième vidéo — upload direct depuis le téléphone/ordinateur","lp.video2Hint":"Cette vidéo sera affichée directement avant le produit principal.",
     "lp.editTitle":"Modifier Landing Page","lp.createTitle":"Créer Landing Page","lp.statusHint":"Draft → Preview → Publish. Le site principal reste séparé.",
-    "lp.typeLabel":"Type de Landing Page","lp.typeLuxia":"LUXIA — /offre","lp.typeOneshop":"OneShop — /oneshop","lp.typeHint":"اختار غير شنو هي الـ Landing Page اللي بغيتي تخدم. كود OneShop مستقل على كود LUXIA.","lp.openOneShop":"فتح OneShop","lp.openOneShopAdmin":"إدارة OneShop","lp.sourceTitle":"Source du produit","lp.sourceSelectLabel":"Choisir un produit du site","lp.sourceNewOption":"— Nouveau produit / contenu personnalisé —",
+    "lp.sourceTitle":"Source du produit","lp.sourceSelectLabel":"Choisir un produit du site","lp.sourceNewOption":"— Nouveau produit / contenu personnalisé —",
     "lp.sourceHint":"Choisir un produit copie ses informations dans la Landing Page. Les modifications de la Landing Page restent indépendantes du produit original.",
     "lp.product2Title":"Produit secondaire (optionnel)","lp.product2SelectLabel":"Ajouter un second produit à la page (optionnel)","lp.product2NoneOption":"— Aucun second produit —",
     "lp.product2Hint":"Le client pourra l'ajouter à sa commande via une option supplémentaire dans le formulaire, à son propre prix.",
@@ -823,7 +823,7 @@ const I18N = {
     "admin.videoUploading":"⏳ جارٍ الرفع...","admin.videoUploaded":"✅ تم رفع الفيديو — اضغط «حفظ» لتأكيد الحفظ","admin.videoUploadToast":"تم رفع الفيديو، لا تنسَ الضغط على حفظ",
     "lp.videoLabel":"رابط الفيديو (mp4) — يظهر قبل زر الطلب","lp.videoUploadLabel":"تحميل فيديو من الجهاز","lp.video2Label":"الفيديو الثاني — تحميل مباشر من الهاتف أو الحاسوب","lp.video2Hint":"هذا الفيديو غادي يبان مباشرة قبل المنتج الرئيسي.",
     "lp.editTitle":"تعديل صفحة الهبوط","lp.createTitle":"إنشاء صفحة هبوط","lp.statusHint":"مسودة ← معاينة ← نشر. الموقع الرئيسي يبقى منفصلاً.",
-    "lp.typeLabel":"نوع صفحة الهبوط","lp.typeLuxia":"LUXIA — /offre","lp.typeOneshop":"OneShop — /oneshop","lp.typeHint":"اختار غير نوع صفحة الهبوط. كود OneShop مستقل على كود LUXIA.","lp.openOneShop":"فتح OneShop","lp.openOneShopAdmin":"إدارة OneShop","lp.sourceTitle":"مصدر المنتج","lp.sourceSelectLabel":"اختيار منتج من الموقع","lp.sourceNewOption":"— منتج جديد / محتوى مخصص —",
+    "lp.sourceTitle":"مصدر المنتج","lp.sourceSelectLabel":"اختيار منتج من الموقع","lp.sourceNewOption":"— منتج جديد / محتوى مخصص —",
     "lp.sourceHint":"اختيار منتج ينسخ معلوماته إلى صفحة الهبوط. التعديلات على صفحة الهبوط تبقى مستقلة عن المنتج الأصلي.",
     "lp.product2Title":"منتج ثانٍ (اختياري)","lp.product2SelectLabel":"إضافة منتج ثانٍ للصفحة (اختياري)","lp.product2NoneOption":"— بدون منتج ثانٍ —",
     "lp.product2Hint":"يمكن للزبون إضافته إلى طلبه عبر خيار إضافي في نموذج الطلب، بسعره الخاص.",
@@ -2293,7 +2293,7 @@ let LANDING_PAGES = [];
 let LANDING_EDIT_ID = null;
 
 function landingDefaults(){ return {
-  slug:"offre", type:"luxia", status:"draft", language:"ar", kicker:"LUXIA",
+  slug:"offre", status:"draft", language:"ar", kicker:"LUXIA",
   price:"", oldPrice:"", whatsapp:"", heroImage:"", video:"", video2:"",
   gallery:[], showOrderForm:true,
   showReviews:true, showFaq:true, showGallery:true, showBenefits:true, showWhatsapp:true,
@@ -2309,7 +2309,7 @@ function landingDefaults(){ return {
 }; }
 function landingNormalize(x){
   const d=landingDefaults(); const c=x?.config||{};
-  const merged={...d,...c}; merged.type = merged.type==="oneshop" ? "oneshop" : "luxia";
+  const merged={...d,...c};
   /* Backward-compat: pages saved before the bilingual fields existed only had a
      single title/subtitle/description/cta/product2Name (and a `language` flag).
      If the new Fr/Ar pair is still empty, pour the legacy value into whichever
@@ -2323,6 +2323,10 @@ function landingNormalize(x){
   [['benefits','benefitsFr','benefitsAr'],['reviews','reviewsFr','reviewsAr'],['faqs','faqsFr','faqsAr']].forEach(([oldKey,frKey,arKey])=>{
     if(Array.isArray(c[oldKey]) && c[oldKey].length && !(merged[frKey]||[]).length && !(merged[arKey]||[]).length) merged[suffix==='Ar'?arKey:frKey]=c[oldKey];
   });
+  /* A landing page sourced from a main product uses the product name as its
+     title and the description in the dedicated description field; do not show
+     the same description again as the subtitle. */
+  if(merged.sourceProductId){ merged.subtitleFr=''; merged.subtitleAr=''; }
   return {...merged, id:x?.id||null, slug:x?.slug||c.slug||"", status:x?.status||c.status||"draft"};
 }
 async function fetchLandingPages(){
@@ -2377,21 +2381,6 @@ function landingEditorHTML(p){
     return `<option value="${escAttr(x.id)}" ${sourceProductId===x.id?'selected':''}>${escHtml(nfr)} — ${escHtml(String(x.price))} DH</option>`;
   }).join('');
   return `<div class="lp-admin">
-    <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.typeLabel")}</h3>
-      <div class="lp-admin-grid">
-        <div class="full">
-          <select id="lp-type">
-            <option value="luxia" ${p.type==='luxia'?'selected':''}>${t("lp.typeLuxia")}</option>
-            <option value="oneshop" ${p.type==='oneshop'?'selected':''}>${t("lp.typeOneshop")}</option>
-          </select>
-          <small>${t("lp.typeHint")}</small>
-        </div>
-        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn btn-ghost" href="/oneshop" target="_blank" rel="noopener">${t("lp.openOneShop")}</a>
-          <a class="btn btn-ghost" href="/oneshop#admin" target="_blank" rel="noopener">${t("lp.openOneShopAdmin")}</a>
-        </div>
-      </div>
-    </div>
     <div class="admin-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="font-family:var(--font-display);font-size:calc(30px * var(--font-scale))">${p.id?t("lp.editTitle"):t("lp.createTitle")}</h2><small>${t("lp.statusHint")}</small></div><span class="lp-status">${escHtml(p.status)}</span></div></div>
     <div class="admin-card"><h3 style="margin-bottom:16px">${t("lp.sourceTitle")}</h3>
       <div class="lp-admin-grid">
@@ -2461,7 +2450,6 @@ function collectLandingForm(){
      else into "-". The old ASCII-only regex silently wiped out any Arabic slug,
      leaving an empty string and triggering a false "slug required" error. */
   const slugify = s => (s||"").trim().toLowerCase().replace(/[^\p{L}\p{N}-]+/gu,'-').replace(/^-+|-+$/g,'');
-  p.type=document.getElementById('lp-type')?.value==="oneshop" ? "oneshop" : "luxia";
   p.slug = slugify(document.getElementById('lp-slug').value);
   p.status=document.getElementById('lp-status').value; p.language=document.getElementById('lp-language').value;
   ['kicker','price','oldprice','whatsapp'].forEach(k=>{const id='lp-'+k; p[k==='oldprice'?'oldPrice':k]=document.getElementById(id).value.trim();});
@@ -2504,12 +2492,6 @@ async function renderAdminLandingPages(){
   document.querySelectorAll('[data-lp-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm(t("lp.confirmDelete")))return;try{await deleteLandingPage(b.dataset.lpDelete);showToast(t("lp.deletedToast"));await renderAdminLandingPages();}catch(e){showToast(e?.message||t("admin.backendWriteError"));}}));
 }
 function bindLandingEditor(){
-  document.getElementById('lp-type')?.addEventListener('change',()=>{
-    const type=document.getElementById('lp-type').value;
-    const slugEl=document.getElementById('lp-slug');
-    if(type==='oneshop' && slugEl && (!slugEl.value || slugEl.value==='offre')) slugEl.value='oneshop';
-    if(type==='luxia' && slugEl && slugEl.value==='oneshop') slugEl.value='offre';
-  });
   document.getElementById('lp-source-product')?.addEventListener('change',()=>{
     const id=document.getElementById('lp-source-product').value; if(!id) return;
     const prod=PRODUCTS.find(x=>x.id===id); if(!prod) return;
@@ -2517,7 +2499,9 @@ function bindLandingEditor(){
     const nameFr=I18N.fr[prod.nameKey]||prod.id; const nameAr=I18N.ar[prod.nameKey]||nameFr;
     const descFr=I18N.fr[prod.descKey]||''; const descAr=I18N.ar[prod.descKey]||'';
     set('lp-title-fr',nameFr); set('lp-title-ar',nameAr);
-    set('lp-subtitle-fr',descFr); set('lp-subtitle-ar',descAr);
+    /* The main product already appears as the title; keep the subtitle empty
+       to avoid duplicating the product description in the landing-page hero. */
+    set('lp-subtitle-fr',''); set('lp-subtitle-ar','');
     set('lp-description-fr',descFr); set('lp-description-ar',descAr);
     set('lp-price',String(prod.price||''));
     const gallery=(PRODUCT_IMAGE_GALLERY[prod.id]||[]).filter(Boolean);
