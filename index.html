@@ -411,6 +411,82 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-product-card::after{content:"";position:absolute;inset:7px;border:1px solid rgba(224,198,144,.20);border-radius:17px;pointer-events:none;z-index:3}
 .lp-product-card > *{position:relative;z-index:2}
 </style>
+
+<style id="luxia-home-gallery-final">
+.product-visual{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  position:relative !important;
+  overflow:hidden !important;
+}
+.product-visual > .product-photo{
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  aspect-ratio:4/5 !important;
+  object-fit:cover !important;
+}
+.product-visual .product-gallery-dots{
+  position:static !important;
+  transform:none !important;
+  order:3 !important;
+  width:100% !important;
+  margin:9px 0 10px !important;
+  padding:0 10px !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  display:flex !important;
+  gap:7px !important;
+  justify-content:center !important;
+}
+.product-visual .product-gallery-dot{
+  width:6px !important;
+  height:6px !important;
+  border-radius:50% !important;
+}
+.product-visual .product-gallery-strip{
+  order:2 !important;
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  gap:9px !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  padding:4px 1px 7px !important;
+  scroll-snap-type:x mandatory !important;
+  -webkit-overflow-scrolling:touch !important;
+  touch-action:pan-x !important;
+  overscroll-behavior-x:contain !important;
+  scrollbar-width:none !important;
+  direction:ltr !important;
+}
+.product-visual .product-gallery-strip::-webkit-scrollbar{display:none !important}
+.product-visual .product-gallery-thumb{
+  position:relative !important;
+  flex:0 0 calc((100% - 18px)/3) !important;
+  width:calc((100% - 18px)/3) !important;
+  aspect-ratio:1/1 !important;
+  height:auto !important;
+  overflow:hidden !important;
+  border-radius:10px !important;
+  border:1.5px solid rgba(199,161,92,.72) !important;
+  background:#1c0f16 !important;
+  box-shadow:0 4px 14px rgba(0,0,0,.18) !important;
+  scroll-snap-align:start !important;
+  cursor:zoom-in !important;
+  padding:0 !important;
+  opacity:1 !important;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease !important;
+}
+.product-visual .product-gallery-thumb:hover{border-color:var(--gold-soft) !important;box-shadow:0 6px 18px rgba(199,161,92,.16) !important}
+.product-visual .product-gallery-thumb:active{transform:scale(.97) !important}
+.product-visual .product-gallery-thumb img{width:100% !important;height:100% !important;object-fit:cover !important;display:block !important}
+.product-visual .product-gallery-thumb.active{
+  border-color:var(--gold-soft) !important;
+  box-shadow:0 0 0 1px rgba(224,198,144,.25) !important;
+}
+</style>
 </head>
 <body>
 
@@ -1385,7 +1461,13 @@ function renderProducts(){
       <div class="product-visual" data-gallery-id="${p.id}" data-gallery-index="0" style="touch-action:pan-y;">
         <img class="product-photo" src="${gallery[0]}" alt="${t(p.nameKey)}" loading="lazy">
         <span class="badge">${t(p.badgeKey)}</span>
-        ${gallery.length>1?`<div class="product-gallery-dots" aria-label="صور المنتج">${gallery.map((_,i)=>`<button type="button" class="product-gallery-dot ${i===0?'active':''}" data-gallery-dot="${p.id}:${i}" aria-label="الصورة ${i+1}"></button>`).join('')}</div>`:''}
+        ${gallery.length>1?`
+          <div class="product-gallery-strip" aria-label="صور إضافية للمنتج">
+            ${gallery.map((src,i)=>`<button type="button" class="product-gallery-thumb ${i===0?'active':''}" data-gallery-thumb="${p.id}:${i}" aria-label="الصورة ${i+1}"><img src="${escAttr(src)}" alt="${t(p.nameKey)} — ${i+1}" loading="lazy"></button>`).join('')}
+          </div>
+          <div class="product-gallery-dots" aria-label="مؤشر صور المنتج">
+            ${gallery.map((_,i)=>`<button type="button" class="product-gallery-dot ${i===0?'active':''}" data-gallery-dot="${p.id}:${i}" aria-label="الصورة ${i+1}"></button>`).join('')}
+          </div>`:''}
       </div>
       <div class="product-info">
         <h3>${t(p.nameKey)}</h3>
@@ -1404,13 +1486,28 @@ function renderProducts(){
   grid.querySelectorAll("[data-gallery-id]").forEach(box=>{
     const id=box.dataset.galleryId, gallery=PRODUCT_IMAGE_GALLERY[id]||[]; if(gallery.length<2) return;
     let idx=0, sx=0;
-    const show=(n)=>{idx=(n+gallery.length)%gallery.length; const img=box.querySelector('.product-photo'); if(img) img.src=gallery[idx]; box.querySelectorAll('.product-gallery-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));};
+    const show=(n)=>{
+      idx=(n+gallery.length)%gallery.length;
+      const img=box.querySelector('.product-photo');
+      if(img) img.src=gallery[idx];
+      box.querySelectorAll('.product-gallery-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+      box.querySelectorAll('.product-gallery-thumb').forEach((t,i)=>{
+        t.classList.toggle('active',i===idx);
+        if(i===idx) t.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      });
+    };
     box.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
     box.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>35)show(idx+(dx<0?1:-1));},{passive:true});
     let moved=false;
     box.addEventListener('touchstart',()=>{moved=false;},{passive:true});
     box.addEventListener('touchmove',()=>{moved=true;},{passive:true});
-    box.addEventListener('click',e=>{const dot=e.target.closest('[data-gallery-dot]');if(dot){e.stopPropagation();show(parseInt(dot.dataset.galleryDot.split(':')[1],10));return;} if(!moved){openProductImageLightbox(gallery,idx);}});
+    box.addEventListener('click',e=>{
+      const dot=e.target.closest('[data-gallery-dot]');
+      const thumb=e.target.closest('[data-gallery-thumb]');
+      if(dot){e.stopPropagation();show(parseInt(dot.dataset.galleryDot.split(':')[1],10));return;}
+      if(thumb){e.stopPropagation();show(parseInt(thumb.dataset.galleryThumb.split(':')[1],10));return;}
+      if(!moved){openProductImageLightbox(gallery,idx);}
+    });
     // Auto-rotate the homepage product gallery just like the landing page.
     let autoTimer=setInterval(()=>show(idx+1),4200);
     box.addEventListener('touchstart',()=>{clearInterval(autoTimer);},{passive:true});
