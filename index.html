@@ -399,16 +399,33 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   white-space:nowrap;
 }
 
-/* LANDING PAGE: keep only the outer product frame; no inner title/price frame */
+/* LANDING PAGE: title + price frame matches the homepage/site */
 .lp-product-title-price-frame{
-  margin:0 0 14px !important;
-  padding:0 !important;
-  border:0 !important;
-  border-radius:0 !important;
-  background:transparent !important;
-  box-shadow:none !important;
+  position:relative !important;
+  margin:0 0 16px !important;
+  padding:12px 15px !important;
+  border:1px solid rgba(224,198,144,.74) !important;
+  border-radius:18px !important;
+  background:linear-gradient(135deg,rgba(224,198,144,.12),rgba(199,161,92,.035) 55%,rgba(255,255,255,.025)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 7px 20px rgba(0,0,0,.12) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:14px !important;
+  flex-wrap:wrap !important;
 }
-.lp-product-title-price-frame::before{display:none !important;}
+.lp-product-title-price-frame::before{
+  content:"";
+  position:absolute;
+  top:-1px;
+  left:50%;
+  transform:translateX(-50%);
+  width:44px;
+  height:2px;
+  border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--gold-soft),transparent);
+  opacity:.85;
+}
 
 .lp-product-card{
   box-shadow:var(--shadow);
@@ -420,14 +437,6 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
     color-mix(in srgb,var(--product-card-bg) calc(var(--product-card-opacity) * .79),transparent)) !important;
   position:relative;
   overflow:hidden;
-}
-.lp-product-card::before{
-  content:"";
-  position:absolute;
-  inset:7px;
-  border:1px solid rgba(224,198,144,.28);
-  border-radius:17px;
-  pointer-events:none;
 }
 .lp-product-card > *{position:relative;z-index:1;}
 .lp-product-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
@@ -497,7 +506,6 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lunea-video-wrap .lunea-sound-btn{position:absolute;right:12px;bottom:12px;z-index:5;width:42px;height:42px;border:0;border-radius:50%;background:rgba(0,0,0,.58);color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(19px * var(--font-scale));line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .lunea-video-wrap .lunea-sound-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 
-.lp-product-card::after{content:"";position:absolute;inset:7px;border:1px solid rgba(224,198,144,.20);border-radius:17px;pointer-events:none;z-index:3}
 .lp-product-card > *{position:relative;z-index:2}
 </style>
 
