@@ -14,7 +14,7 @@
   --ivory:#f8f1e8; --ivory-dim:#e4d5c8b0;
   --rose:#d7a5a0; --rose-deep:#b5726f;
   --gold:#c7a15c; --gold-soft:#e0c690;
-  --product-card-bg:#c7a15c; --product-card-border:#c7a15c;
+  --product-card-bg:#c7a15c; --product-card-border:#c7a15c; --product-card-opacity:28%;
   --line:#ffffff1f; --shadow:0 20px 50px -20px rgba(0,0,0,.55);
   --font-display:'Cormorant Garamond','Amiri',serif;
   --font-body:'Jost','Amiri',sans-serif;
@@ -317,9 +317,9 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   border:1.5px solid color-mix(in srgb,var(--product-card-border) 82%,transparent) !important;
   border-radius:22px !important;
   background:linear-gradient(145deg,
-    color-mix(in srgb,var(--product-card-bg) 16%,transparent),
-    color-mix(in srgb,var(--product-card-bg) 5%,transparent) 48%,
-    color-mix(in srgb,var(--product-card-bg) 12%,transparent)) !important;
+    color-mix(in srgb,var(--product-card-bg) var(--product-card-opacity),transparent),
+    color-mix(in srgb,var(--product-card-bg) calc(var(--product-card-opacity) * .46),transparent) 48%,
+    color-mix(in srgb,var(--product-card-bg) calc(var(--product-card-opacity) * .79),transparent)) !important;
   position:relative;
   overflow:hidden;
 }
@@ -995,7 +995,7 @@ function applySiteBackground(){
   document.documentElement.style.setProperty("--lunea-admin-bg", SITE_BACKGROUND_URL ? `url("${SITE_BACKGROUND_URL}")` : "none");
   document.body.classList.toggle("has-lunea-custom-bg", !!SITE_BACKGROUND_URL);
 }
-const SITE_THEME_VARS={bgDeep:"--bg-deep",bgPlum:"--bg-plum",bgPlum2:"--bg-plum-2",gold:"--gold",goldSoft:"--gold-soft",productCardBg:"--product-card-bg",productCardBorder:"--product-card-border",fontScale:"--font-scale"};
+const SITE_THEME_VARS={bgDeep:"--bg-deep",bgPlum:"--bg-plum",bgPlum2:"--bg-plum-2",gold:"--gold",goldSoft:"--gold-soft",productCardBg:"--product-card-bg",productCardBorder:"--product-card-border",productCardOpacity:"--product-card-opacity",fontScale:"--font-scale"};
 function applySiteTheme(){
   Object.keys(SITE_THEME_VARS).forEach(k=>{
     const cssVar=SITE_THEME_VARS[k], val=SITE_THEME[k];
@@ -2149,6 +2149,11 @@ async function renderAdminSettings(){
       <div><label style="display:block;margin-bottom:6px;">الذهبي الفاتح</label><input type="color" id="theme-goldSoft" value="${SITE_THEME.goldSoft||'#e0c690'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
       <div><label style="display:block;margin-bottom:6px;">خلفية إطار المنتوجات</label><input type="color" id="theme-productCardBg" value="${SITE_THEME.productCardBg||'#c7a15c'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
       <div><label style="display:block;margin-bottom:6px;">لون إطار المنتوجات</label><input type="color" id="theme-productCardBorder" value="${SITE_THEME.productCardBorder||'#c7a15c'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div>
+        <label style="display:block;margin-bottom:6px;">شفافية خلفية إطار المنتوجات <span id="theme-productCardOpacity-val" style="color:var(--gold-soft);">${SITE_THEME.productCardOpacity||'28%'}</span></label>
+        <input type="range" id="theme-productCardOpacity" min="0" max="100" step="1" value="${parseFloat(SITE_THEME.productCardOpacity)||28}" style="width:100%;" oninput="document.getElementById('theme-productCardOpacity-val').textContent=this.value+'%'">
+        <div style="display:flex;justify-content:space-between;color:var(--ivory-dim);font-size:11px;margin-top:4px;"><span>شفافة</span><span>قوية</span></div>
+      </div>
     </div>
     <div style="height:1px; background:var(--line); margin:30px 0;"></div>
     <h3 style="font-family:var(--font-display); font-size:calc(24px * var(--font-scale)); margin-bottom:10px;">حجم الكتابة فالموقع</h3>
@@ -2318,9 +2323,10 @@ async function renderAdminSettings(){
     try{
       const content={fr:{...(SITE_CONTENT.fr||{})},ar:{...(SITE_CONTENT.ar||{})}};
       Object.keys(SITE_THEME_VARS).forEach(k=>{
-        const val=document.getElementById("theme-"+k)?.value;
+        let val=document.getElementById("theme-"+k)?.value;
         const key="__theme_"+k;
-        if(val){ content.fr[key]=val; content.ar[key]=val; SITE_THEME[k]=val; }
+        if(k==="productCardOpacity" && val!==undefined && val!=="") val=val+"%";
+        if(val!==undefined && val!==""){ content.fr[key]=val; content.ar[key]=val; SITE_THEME[k]=val; }
       });
       await saveSiteContent(content);
       applySiteTheme();
