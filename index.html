@@ -399,6 +399,17 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   white-space:nowrap;
 }
 
+/* LANDING PAGE: keep only the outer product frame; no inner title/price frame */
+.lp-product-title-price-frame{
+  margin:0 0 14px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.lp-product-title-price-frame::before{display:none !important;}
+
 .lp-product-card{
   box-shadow:var(--shadow);
   border:1.5px solid color-mix(in srgb,var(--product-card-border) 82%,transparent) !important;
