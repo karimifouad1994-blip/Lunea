@@ -317,10 +317,65 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-lightbox-imgs img{width:100%;border-radius:12px;display:block}
 .lp-lightbox-close{position:fixed;top:14px;right:14px;z-index:975;width:38px;height:38px;border-radius:50%;background:#1c0f16cc;border:1px solid #ffffff33;color:#f8f1e8;font-size:calc(15px * var(--font-scale));display:flex;align-items:center;justify-content:center;cursor:pointer}
 .lp-gallery img{flex:0 0 calc((100% - 16px)/3);width:calc((100% - 16px)/3);aspect-ratio:1/1;object-fit:cover;border-radius:14px;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 14px rgba(0,0,0,.07);scroll-snap-align:start;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.lp-gallery img:active{transform:scale(.98);box-shadow:0 2px 8px rgba(0,0,0,.06)}.lp-gallery img:first-child{border-color:var(--gold-soft);box-shadow:0 5px 16px rgba(199,161,92,.18)}
-.lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.lp-product-details{margin:14px 0 4px;padding:14px 15px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.025)}.lp-product-details-title{font-family:var(--font-display);font-size:calc(14px * var(--font-scale));color:var(--gold-soft);margin-bottom:7px}.lp-product-desc p{margin:0;color:var(--ivory-dim);font-size:calc(13px * var(--font-scale));line-height:1.65}.lp-product-benefits{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.lp-product-benefits ul{margin:0;padding:0 18px 0 0;color:var(--ivory-dim);font-size:calc(13px * var(--font-scale));line-height:1.7}.lp-product-benefits li{margin:3px 0}html[dir="ltr"] .lp-product-benefits ul{padding:0 0 0 18px}
+.lp-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.lp-product-details{margin:14px 0 4px;padding:4px 0 0;border:0;border-radius:0;background:transparent}.lp-product-details-title{font-family:var(--font-display);font-size:calc(14px * var(--font-scale));color:var(--gold-soft);margin-bottom:7px}.lp-product-desc p{margin:0;color:var(--ivory-dim);font-size:calc(13px * var(--font-scale));line-height:1.65}.lp-product-benefits{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.lp-product-benefits ul{margin:0;padding:0 18px 0 0;color:var(--ivory-dim);font-size:calc(13px * var(--font-scale));line-height:1.7}.lp-product-benefits li{margin:3px 0}html[dir="ltr"] .lp-product-benefits ul{padding:0 0 0 18px}
 .lp-card{background:#ffffff08;border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
 .lp-choose-btn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--gold-soft);background:transparent;color:var(--gold-soft);font-size:calc(13.5px * var(--font-scale));font-weight:500;cursor:pointer;}
 .lp-product-order-label{margin-top:12px;margin-bottom:8px;font-size:calc(12px * var(--font-scale));color:var(--ivory-dim)}.lp-product-label{font-size:calc(11px * var(--font-scale));letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px}.lp-product-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.lp-product-head .lp-price{margin-bottom:0}.lp-added-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.lp-added-actions{display:flex;align-items:center;gap:12px}.lp-added{color:var(--gold-soft);font-size:calc(13.5px * var(--font-scale))}.lp-edit-btn,.lp-remove-btn{background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:calc(12.5px * var(--font-scale));cursor:pointer}.lp-remove-btn{color:#c9a877}.lp-main-required{margin:0;text-align:center;font-size:calc(13px * var(--font-scale));color:var(--ivory-dim)}.lp-picker{margin-top:12px}
+
+/* PRODUCT TITLE + PRICE FRAME — shared by landing page and homepage */
+.product-title-price-frame,
+.lp-product-title-price-frame{
+  position:relative;
+  margin:0 0 14px;
+  padding:10px 14px;
+  border:1px solid rgba(224,198,144,.62);
+  border-radius:14px;
+  background:rgba(199,161,92,.075);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.product-title-price-frame{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  direction:inherit;
+}
+.product-title-price-frame h3{
+  margin:0 !important;
+  font-family:var(--font-display);
+  font-size:calc(21px * var(--font-scale));
+  color:var(--ivory);
+  font-weight:500;
+}
+.product-title-price-frame .product-price{
+  margin:0 !important;
+  color:var(--gold-soft);
+  font-family:var(--font-display);
+  font-size:calc(18px * var(--font-scale));
+  font-weight:500;
+  white-space:nowrap;
+}
+.lp-product-title-price-frame{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.lp-product-title-price-frame b{
+  font-family:var(--font-display);
+  font-size:calc(19px * var(--font-scale));
+  font-weight:500;
+  color:var(--ivory);
+}
+.lp-product-title-price-frame .lp-price{
+  font-family:var(--font-display);
+  font-size:calc(18px * var(--font-scale));
+  color:var(--gold-soft);
+  margin:0;
+  white-space:nowrap;
+}
+
 .lp-product-card{
   box-shadow:var(--shadow);
   border:1.5px solid color-mix(in srgb,var(--product-card-border) 82%,transparent) !important;
@@ -1470,8 +1525,10 @@ function renderProducts(){
           </div>`:''}
       </div>
       <div class="product-info">
-        <h3>${t(p.nameKey)}</h3>
-        <div class="product-price">${p.price} ${t("unit.dh")}</div>
+        <div class="product-title-price-frame">
+          <h3>${t(p.nameKey)}</h3>
+          <div class="product-price">${p.price} ${t("unit.dh")}</div>
+        </div>
         <p class="product-desc">${t(p.descKey)}</p>
         <div class="swatch-row">
           ${getProductColors(p.id).map(c=>`<span class="swatch" style="background:${c.hex||'#c9a877'}" title="${escAttr(currentLang==='ar'?c.ar:c.fr)}"></span>`).join("")}
@@ -2886,7 +2943,7 @@ function renderLandingPublic(p, isPreview){
       <div style="font-family:var(--font-display);font-size:calc(24px * var(--font-scale));margin-bottom:10px;">${lang==='ar'?'تم الطلب بنجاح ❤️':'Commande passée avec succès ❤️'}</div>
       <p style="color:var(--ivory-dim);font-size:calc(15px * var(--font-scale))">${lang==='ar'?'غادي نتصلو بيك قريبا لتأكيد الطلب':'Nous vous contacterons bientôt pour confirmer votre commande'}</p>
     </div>` : `<div id="lp-main-product" class="lp-card lp-product-card" style="text-align:${dir==='rtl'?'right':'left'};padding:18px;margin-bottom:14px;">
-      <div class="lp-product-head lp-product-head-top"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice}dh</span></div>
+      <div class="lp-product-title-price-frame lp-product-head-top"><b>${escHtml(mainProductName)}</b><span class="lp-price">${mainPrice}dh</span></div>
       ${mainImageURL?`<div class="lp-main-gallery-wrap">
         <img id="lp-main-gallery-img" src="${escAttr(mainImageURL)}" alt="${escAttr(mainProductName)}" class="lp-product-card-img">
         ${mainGalleryImages.length>1 ? `<div class="lp-main-image-dots" id="lp-main-image-dots">${mainGalleryImages.map((u,i)=>`<button type="button" class="lp-main-image-dot ${i===0?'active':''}" data-lp-main-image="${i}" aria-label="${lang==='ar'?'الصورة':'Image'} ${i+1}"></button>`).join('')}</div>` : ''}
