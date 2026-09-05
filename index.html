@@ -14,6 +14,7 @@
   --ivory:#f8f1e8; --ivory-dim:#e4d5c8b0;
   --rose:#d7a5a0; --rose-deep:#b5726f;
   --gold:#c7a15c; --gold-soft:#e0c690;
+  --product-card-bg:#c7a15c; --product-card-border:#c7a15c;
   --line:#ffffff1f; --shadow:0 20px 50px -20px rgba(0,0,0,.55);
   --font-display:'Cormorant Garamond','Amiri',serif;
   --font-body:'Jost','Amiri',sans-serif;
@@ -313,9 +314,12 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
 .lp-product-order-label{margin-top:12px;margin-bottom:8px;font-size:calc(12px * var(--font-scale));color:var(--ivory-dim)}.lp-product-label{font-size:calc(11px * var(--font-scale));letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px}.lp-product-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.lp-product-head .lp-price{margin-bottom:0}.lp-added-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.lp-added-actions{display:flex;align-items:center;gap:12px}.lp-added{color:var(--gold-soft);font-size:calc(13.5px * var(--font-scale))}.lp-edit-btn,.lp-remove-btn{background:none;border:none;color:var(--ivory-dim);text-decoration:underline;font-size:calc(12.5px * var(--font-scale));cursor:pointer}.lp-remove-btn{color:#c9a877}.lp-main-required{margin:0;text-align:center;font-size:calc(13px * var(--font-scale));color:var(--ivory-dim)}.lp-picker{margin-top:12px}
 .lp-product-card{
   box-shadow:var(--shadow);
-  border:1.5px solid rgba(199,161,92,.82) !important;
+  border:1.5px solid color-mix(in srgb,var(--product-card-border) 82%,transparent) !important;
   border-radius:22px !important;
-  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)) !important;
+  background:linear-gradient(145deg,
+    color-mix(in srgb,var(--product-card-bg) 16%,transparent),
+    color-mix(in srgb,var(--product-card-bg) 5%,transparent) 48%,
+    color-mix(in srgb,var(--product-card-bg) 12%,transparent)) !important;
   position:relative;
   overflow:hidden;
 }
@@ -323,7 +327,7 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   content:"";
   position:absolute;
   inset:7px;
-  border:1px solid rgba(224,198,144,.20);
+  border:1px solid rgba(224,198,144,.28);
   border-radius:17px;
   pointer-events:none;
 }
@@ -991,7 +995,7 @@ function applySiteBackground(){
   document.documentElement.style.setProperty("--lunea-admin-bg", SITE_BACKGROUND_URL ? `url("${SITE_BACKGROUND_URL}")` : "none");
   document.body.classList.toggle("has-lunea-custom-bg", !!SITE_BACKGROUND_URL);
 }
-const SITE_THEME_VARS={bgDeep:"--bg-deep",bgPlum:"--bg-plum",bgPlum2:"--bg-plum-2",gold:"--gold",goldSoft:"--gold-soft",fontScale:"--font-scale"};
+const SITE_THEME_VARS={bgDeep:"--bg-deep",bgPlum:"--bg-plum",bgPlum2:"--bg-plum-2",gold:"--gold",goldSoft:"--gold-soft",productCardBg:"--product-card-bg",productCardBorder:"--product-card-border",fontScale:"--font-scale"};
 function applySiteTheme(){
   Object.keys(SITE_THEME_VARS).forEach(k=>{
     const cssVar=SITE_THEME_VARS[k], val=SITE_THEME[k];
@@ -2143,6 +2147,8 @@ async function renderAdminSettings(){
       <div><label style="display:block;margin-bottom:6px;">الخلفية (تدرج)</label><input type="color" id="theme-bgPlum2" value="${SITE_THEME.bgPlum2||'#3a1e2b'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
       <div><label style="display:block;margin-bottom:6px;">الذهبي / كراميل الأساسي</label><input type="color" id="theme-gold" value="${SITE_THEME.gold||'#c7a15c'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
       <div><label style="display:block;margin-bottom:6px;">الذهبي الفاتح</label><input type="color" id="theme-goldSoft" value="${SITE_THEME.goldSoft||'#e0c690'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div><label style="display:block;margin-bottom:6px;">خلفية إطار المنتوجات</label><input type="color" id="theme-productCardBg" value="${SITE_THEME.productCardBg||'#c7a15c'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
+      <div><label style="display:block;margin-bottom:6px;">لون إطار المنتوجات</label><input type="color" id="theme-productCardBorder" value="${SITE_THEME.productCardBorder||'#c7a15c'}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:none;"></div>
     </div>
     <div style="height:1px; background:var(--line); margin:30px 0;"></div>
     <h3 style="font-family:var(--font-display); font-size:calc(24px * var(--font-scale)); margin-bottom:10px;">حجم الكتابة فالموقع</h3>
