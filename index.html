@@ -568,16 +568,17 @@ body.has-lunea-custom-bg .hero{background-image:linear-gradient(180deg,rgba(24,1
   display:block !important;
   width:100% !important;
   height:auto !important;
-  aspect-ratio:4/5 !important;
-  object-fit:cover !important;
-  object-position:center 30% !important;
+  aspect-ratio:auto !important;
+  object-fit:contain !important;
+  object-position:center center !important;
   border-radius:14px !important;
   z-index:1 !important;
 }
 .product-visual::after{
   border-radius:14px !important;
-  inset:12px 18px 0 !important;
-  height:calc((100vw - 36px) * 1.25) !important;
+  inset:12px 18px auto !important;
+  height:auto !important;
+  aspect-ratio:auto !important;
   max-height:none !important;
   z-index:2 !important;
 }
@@ -4044,4 +4045,15 @@ window.addEventListener("DOMContentLoaded",()=>{ luneaInitPromise.then(()=> boot
 <style>
 .product-card::after{content:"";position:absolute;inset:6px;border:1px solid rgba(224,198,144,.20);border-radius:calc(var(--radius-l) - 5px);pointer-events:none;z-index:3}
 .product-card > *{position:relative;z-index:2}
+</style>
+
+<style id="luxia-v9-full-main-image">
+/* SITE: show the complete main product image, like the landing page; never crop it. */
+.product-visual > .product-photo{
+  width:100% !important;
+  height:auto !important;
+  aspect-ratio:auto !important;
+  object-fit:contain !important;
+  object-position:center center !important;
+}
 </style>
